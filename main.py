@@ -24,7 +24,7 @@ class SpeechToText:
             channels=1,
             rate=44100,
             input=True,
-            input_device_index=0,   # <<<< 新增這一行，強制指定 card 1
+            input_device_index=1,   # <<<< 新增這一行，強制指定 card 1
             frames_per_buffer=4096
         )
 
