@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  tjbot-streamlit:
+    build: .
+    container_name: tjbot-app
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+      - /etc/machine-id:/etc/machine-id:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    devices:
+      - /dev/snd:/dev/snd  # 音效裝置對映
+    restart: unless-stopped
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    ports:
+      - "4040:4040"
+    command: 
+      - "http"
+      - "tjbot-streamlit:8501"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    depends_on:
+      - tjbot-streamlit

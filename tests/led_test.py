@@ -1,4 +1,4 @@
-from rpi_ws281x import PixelStrip, Color
+from utils.rpi_ws281x import PixelStrip, Color
 
 LED_COUNT = 1  # LED 燈的數量
 LED_PIN = 18   # GPIO 引腳
