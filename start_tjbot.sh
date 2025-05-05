@@ -4,15 +4,23 @@
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd "$PROJECT_DIR"
 
+# 設置 Python 3.11.2 為當前目錄的預設版本
+echo "Setting Python 3.11.2 for this project..."
+pyenv local 3.11.2
+
 # 檢查虛擬環境是否存在
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
-    python3.11 -m venv .venv
+    python -m venv .venv
 fi
 
 # 啟動虛擬環境
 echo "Activating virtual environment..."
 source .venv/bin/activate
+
+# 確保 pip 是最新的
+echo "Upgrading pip..."
+pip install --upgrade pip
 
 # 檢查系統依賴是否安裝
 if ! command -v ffmpeg &> /dev/null; then
@@ -34,9 +42,17 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
-# 設置 ngrok 認證（如果尚未設置）
+# 載入 .env 檔案中的變數
+echo "Loading environment variables..."
+source .env
+
+# 設置 ngrok 認證
 if [ -n "$NGROK_AUTHTOKEN" ]; then
+    echo "Setting up ngrok authentication..."
     ngrok config add-authtoken "$NGROK_AUTHTOKEN"
+else
+    echo "Error: NGROK_AUTHTOKEN not found in .env file!"
+    exit 1
 fi
 
 # 啟動 Streamlit 應用
