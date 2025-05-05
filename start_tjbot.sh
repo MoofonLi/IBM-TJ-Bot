@@ -14,11 +14,29 @@ fi
 echo "Activating virtual environment..."
 source .venv/bin/activate
 
+# 檢查系統依賴是否安裝
+if ! command -v ffmpeg &> /dev/null; then
+    echo "Error: ffmpeg is not installed!"
+    echo "Please run install_dependencies.sh first:"
+    echo "chmod +x install_dependencies.sh && ./install_dependencies.sh"
+    exit 1
+fi
+
+# 檢查並安裝 Python 套件
+echo "Checking and installing Python dependencies..."
+pip install -r requirements.txt
+pip install --upgrade streamlit audio-recorder-streamlit
+
 # 檢查 .env 文件是否存在
 if [ ! -f ".env" ]; then
     echo "Error: .env file not found!"
     echo "Please create .env file with your API credentials"
     exit 1
+fi
+
+# 設置 ngrok 認證（如果尚未設置）
+if [ -n "$NGROK_AUTHTOKEN" ]; then
+    ngrok config add-authtoken "$NGROK_AUTHTOKEN"
 fi
 
 # 啟動 Streamlit 應用
