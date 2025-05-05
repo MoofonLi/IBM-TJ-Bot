@@ -33,7 +33,7 @@ fi
 # 檢查並安裝 Python 套件
 echo "Checking and installing Python dependencies..."
 pip install -r requirements.txt
-pip install --upgrade streamlit audio-recorder-streamlit
+pip install --upgrade streamlit audio-recorder-streamlit python-dotenv
 
 # 檢查 .env 文件是否存在
 if [ ! -f ".env" ]; then
