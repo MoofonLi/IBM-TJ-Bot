@@ -26,6 +26,9 @@ network:
 ```
 ### Install system dependencies
 ```
+git clone git@github.com:MoofonLi/IBM-TJ-Bot
+```
+```
 chmod +x install_dependencies.sh
 ```
 ```
