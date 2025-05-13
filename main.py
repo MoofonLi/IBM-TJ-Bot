@@ -1,12 +1,15 @@
+import os
+import asyncio
+import subprocess
+import signal
+import sys
+from dotenv import load_dotenv
 from utils.watson_assistant import WatsonAssistant
 from utils.text_to_speech import TextToSpeech
 from utils.hardware_control import HardwareControl
 from ibm_watson import SpeechToTextV1
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 import pyaudio
-import asyncio
-import os
-from dotenv import load_dotenv
 
 class SpeechToText:
     def __init__(self, apikey, url):
@@ -24,7 +27,7 @@ class SpeechToText:
             channels=1,
             rate=44100,
             input=True,
-            input_device_index=1,   # <<<< 新增這一行，強制指定 card 1
+            input_device_index=1,   # 強制指定 card 1
             frames_per_buffer=4096
         )
 
@@ -64,8 +67,10 @@ class SpeechToText:
             self.stream.close()
         self.audio.terminate()
 
-async def main():
+async def run_background_tasks():
+    """後台運行 TJBot 的語音和硬體功能"""
     # 從環境變數讀取 IBM Watson 資訊
+    load_dotenv()
     assistant_apikey = os.getenv('ASSISTANT_APIKEY')
     assistant_url = os.getenv('ASSISTANT_URL')
     assistant_id = os.getenv('ASSISTANT_ID')
@@ -130,6 +135,58 @@ async def main():
     finally:
         stt.stop_microphone()
         hardware.cleanup()
+
+def run_streamlit():
+    """啟動 Streamlit 網頁界面"""
+    try:
+        # 啟動 ngrok 將 Streamlit 暴露到外網
+        ngrok_process = None
+        ngrok_authtoken = os.getenv('NGROK_AUTHTOKEN')
+        if ngrok_authtoken:
+            try:
+                # 啟動 ngrok 隧道
+                ngrok_command = f"ngrok http 8501 --authtoken={ngrok_authtoken}"
+                ngrok_process = subprocess.Popen(ngrok_command.split(), stdout=subprocess.PIPE)
+                print("Ngrok tunnel started. Web interface will be accessible from outside.")
+            except Exception as e:
+                print(f"Failed to start ngrok: {e}")
+        
+        # 啟動 Streamlit 應用
+        streamlit_command = "streamlit run app.py"
+        streamlit_process = subprocess.Popen(streamlit_command.split(), stdout=subprocess.PIPE)
+        print("Streamlit UI started at http://localhost:8501")
+        
+        return streamlit_process, ngrok_process
+    except Exception as e:
+        print(f"Error starting UI: {e}")
+        return None, None
+
+def signal_handler(sig, frame):
+    """處理程式結束信號"""
+    print("\nProgram is shutting down...")
+    sys.exit(0)
+
+async def main():
+    """主函數，運行 TJBot 和 Streamlit UI"""
+    # 註冊信號處理器
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    # 啟動 Streamlit UI
+    streamlit_process, ngrok_process = run_streamlit()
+    
+    try:
+        # 運行 TJBot 後台任務
+        await run_background_tasks()
+    except Exception as e:
+        print(f"Error in background tasks: {e}")
+    finally:
+        # 清理資源
+        if streamlit_process:
+            streamlit_process.terminate()
+        if ngrok_process:
+            ngrok_process.terminate()
+        
+        print("All services have been stopped.")
 
 if __name__ == "__main__":
     load_dotenv()
