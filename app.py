@@ -227,11 +227,17 @@ def main():
         with st.spinner("正在初始化系統..."):
             test_results = test_system()
             
-            # 顯示測試結果
-            st.success("系統初始化完成") if all(test_results.values()) else st.warning("部分組件初始化失敗")
+            # 顯示測試結果 - 修正這裡的三元運算子
+            if all(test_results.values()):
+                st.success("系統初始化完成")
+            else:
+                st.warning("部分組件初始化失敗")
             
             for component, status in test_results.items():
-                st.sidebar.write(f"✅ {component}" if status else f"❌ {component}")
+                if status:
+                    st.sidebar.write(f"✅ {component}")
+                else:
+                    st.sidebar.write(f"❌ {component}")
     
     # 側邊欄 - 狀態和控制
     with st.sidebar:
@@ -245,7 +251,10 @@ def main():
                 
                 # 顯示測試結果
                 for component, status in test_results.items():
-                    st.write(f"✅ {component}" if status else f"❌ {component}")
+                    if status:
+                        st.write(f"✅ {component}")
+                    else:
+                        st.write(f"❌ {component}")
         
         # 關閉系統按鈕
         if st.button("關閉系統"):
