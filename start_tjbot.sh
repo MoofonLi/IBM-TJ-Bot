@@ -56,7 +56,7 @@ fi
 
 # 使用 sudo -E 啟動 Streamlit 應用，以確保有適當權限訪問硬體
 echo "Starting TJBot Controller with admin privileges..."
-sudo -E $(which streamlit) run main.py --server.port 8501 --server.headless true &
+sudo -E $(which streamlit) run app.py --server.port 8501 --server.headless true &
 
 # 等待應用啟動
 echo "Waiting for application to start..."
