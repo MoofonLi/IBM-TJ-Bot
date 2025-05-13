@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import subprocess
 import time
 from audio_recorder_streamlit import audio_recorder
+import pyaudio
 
 # 導入現有的模組
 from utils.watson_assistant import WatsonAssistant
@@ -41,9 +42,65 @@ if 'test_results' not in st.session_state:
 
 class SpeechToText:
     def __init__(self, apikey, url):
+        # 初始化 Speech to Text 服務
         authenticator = IAMAuthenticator(apikey)
         self.speech_to_text = SpeechToTextV1(authenticator=authenticator)
         self.speech_to_text.set_service_url(url)
+        self.audio = pyaudio.PyAudio()
+        self.stream = None
+
+    def start_microphone(self):
+        """初始化麥克風流"""
+        try:
+            self.stream = self.audio.open(
+                format=pyaudio.paInt16,
+                channels=1,
+                rate=44100,
+                input=True,
+                input_device_index=1,  # 強制指定 card 1
+                frames_per_buffer=4096
+            )
+            return True
+        except Exception as e:
+            st.error(f"麥克風初始化失敗: {e}")
+            return False
+
+    def listen(self, duration=5):
+        """從麥克風捕獲語音並返回轉錄結果"""
+        if not self.stream:
+            if not self.start_microphone():
+                return ""
+        
+        frames = []
+        for _ in range(0, int(16000 / 4096 * duration)):  # 捕捉指定秒數音頻
+            try:
+                data = self.stream.read(4096, exception_on_overflow=False)  # 忽略溢出錯誤
+                frames.append(data)
+            except Exception as e:
+                st.error(f"錄音錯誤: {e}")
+                return ""
+
+        audio_data = b''.join(frames)
+
+        try:
+            # 傳送音訊到 IBM Watson Speech to Text
+            result = self.speech_to_text.recognize(
+                audio=audio_data,
+                content_type='audio/l16; rate=44100; channels=1',
+                model='en-US_BroadbandModel',
+            ).get_result()
+
+            # 提取轉錄文本
+            if 'results' in result and len(result['results']) > 0:
+                transcript = result['results'][0]['alternatives'][0]['transcript']
+                st.info(f"識別到: {transcript}")
+                return transcript
+            else:
+                st.warning("未檢測到語音。")
+                return ""
+        except Exception as e:
+            st.error(f"語音識別錯誤: {e}")
+            return ""
 
     def recognize_audio(self, audio_data, content_type='audio/webm'):
         """識別音訊檔案"""
@@ -62,6 +119,13 @@ class SpeechToText:
         except Exception as e:
             st.error(f"語音識別錯誤: {e}")
             return ""
+
+    def stop_microphone(self):
+        """關閉麥克風流"""
+        if self.stream and not self.stream.is_stopped():
+            self.stream.stop_stream()
+            self.stream.close()
+        self.audio.terminate()
 
 def convert_webm_to_wav(webm_data):
     """將 webm 音頻轉換為 wav 格式"""
@@ -150,6 +214,12 @@ def shutdown_system():
         # 清理資源
         st.session_state.hardware.cleanup()
     
+    if st.session_state.stt:
+        try:
+            st.session_state.stt.stop_microphone()
+        except:
+            pass
+    
     # 重置狀態
     st.session_state.assistant = None
     st.session_state.tts = None
@@ -165,6 +235,10 @@ def process_message(user_input):
         st.error("服務尚未初始化！請先測試系統")
         return
     
+    if not user_input or user_input.strip() == "":
+        st.warning("請輸入有效訊息")
+        return
+    
     # 發送到 Watson Assistant
     response = st.session_state.assistant.send_message(user_input)
     
@@ -174,18 +248,27 @@ def process_message(user_input):
         entities = response.get('output', {}).get('entities', [])
         response_texts = response.get('output', {}).get('generic', [])
         
-        # 整合回應文字
-        bot_reply = ""
+        # 保存對話歷史 - 用戶輸入
+        st.session_state.chat_history.append(("使用者", user_input))
+        
+        # 像原始代碼一樣逐條處理回應文字
         for text in response_texts:
             if text['response_type'] == 'text':
-                bot_reply += text['text'] + " "
-        
-        # 保存對話歷史
-        st.session_state.chat_history.append(("使用者", user_input))
-        st.session_state.chat_history.append(("TJBot", bot_reply))
+                bot_reply = text['text']
+                
+                # 保存對話歷史 - 機器人回應
+                st.session_state.chat_history.append(("TJBot", bot_reply))
+                
+                # 語音輸出 - 直接在TJBot上播放
+                if st.session_state.tts:
+                    try:
+                        st.session_state.tts.speak(bot_reply)
+                        st.success(f"TJBot 回應: {bot_reply}")
+                    except Exception as e:
+                        st.error(f"語音合成錯誤: {str(e)}")
         
         # 執行硬體動作
-        if intents:
+        if intents and len(intents) > 0:
             top_intent = intents[0]['intent']
             if top_intent == 'wave':
                 st.session_state.hardware.wave()
@@ -197,20 +280,30 @@ def process_message(user_input):
                 st.session_state.hardware.raise_arm()
                 st.info("機器人舉起手臂🙋‍♂️")
             elif top_intent == 'shine':
+                # 從 entities 提取顏色
                 color = next((e['value'] for e in entities if e['entity'] == 'color'), 'white')
                 st.session_state.hardware.shine(color)
                 st.info(f"機器人發光: {color}✨")
         
-        # 語音輸出（只在 TJBot 上）
-        if st.session_state.tts and bot_reply:
-            st.session_state.tts.speak(bot_reply)
-        
-        # 每次執行後回歸硬體初始狀態
-        st.session_state.hardware.lower_arm()
-        
-        return bot_reply
+        return "處理完成"
     else:
         st.error("無法獲取 Watson 回應")
+        return None
+
+def voice_input_direct():
+    """直接從麥克風捕獲語音並處理"""
+    if not st.session_state.stt:
+        st.error("語音識別服務未初始化")
+        return
+    
+    st.info("正在聆聽，請說話...")
+    user_input = st.session_state.stt.listen(duration=5)
+    
+    if user_input and user_input.strip():
+        st.success(f"識別到: {user_input}")
+        return process_message(user_input)
+    else:
+        st.warning("未檢測到語音或識別失敗")
         return None
 
 def clear_chat_history():
@@ -267,12 +360,14 @@ with st.sidebar:
         if st.button("👋 揮手"):
             if st.session_state.hardware:
                 st.session_state.hardware.wave()
+                st.success("揮手動作已執行")
             else:
                 st.error("硬體未初始化")
         
         if st.button("🙋‍♂️ 舉手"):
             if st.session_state.hardware:
                 st.session_state.hardware.raise_arm()
+                st.success("舉手動作已執行")
             else:
                 st.error("硬體未初始化")
     
@@ -280,6 +375,7 @@ with st.sidebar:
         if st.button("🙇 放下手"):
             if st.session_state.hardware:
                 st.session_state.hardware.lower_arm()
+                st.success("放下手臂動作已執行")
             else:
                 st.error("硬體未初始化")
     
@@ -290,40 +386,31 @@ with st.sidebar:
         if st.session_state.hardware:
             st.session_state.hardware.shine(color)
             if color == "off":
-                st.info("已關閉燈光")
+                st.success("已關閉燈光")
             else:
-                st.info(f"燈光顏色: {color}✨")
+                st.success(f"燈光已變更為: {color}")
         else:
             st.error("硬體未初始化")
     
     # 語音輸入按鈕
     st.header("語音輸入")
-    audio_bytes = audio_recorder(
-        text="按此開始錄音",
-        recording_color="#e8b62c",
-        neutral_color="#6aa36f",
-        icon_name="microphone",
-        icon_size="2x"
-    )
+    if st.button("🎤 按此開始語音輸入", use_container_width=True):
+        if st.session_state.stt:
+            voice_input_direct()
+        else:
+            st.error("語音識別服務未初始化")
     
-    if audio_bytes and st.session_state.stt:
-        with st.spinner("正在處理語音..."):
-            # 轉換音頻格式
-            wav_data = convert_webm_to_wav(audio_bytes)
-            
-            if wav_data:
-                # 進行語音識別
-                user_input = st.session_state.stt.recognize_audio(wav_data, content_type='audio/wav')
-                
-                if user_input:
-                    # 通知用戶識別結果
-                    st.success(f"識別到: {user_input}")
-                    # 自動處理語音輸入
-                    process_message(user_input)
-                else:
-                    st.error("無法識別語音，請再試一次")
-            else:
-                st.error("音頻格式轉換失敗")
+    # 測試語音輸出
+    st.header("系統測試")
+    if st.button("測試語音輸出"):
+        if st.session_state.tts:
+            try:
+                st.session_state.tts.speak("這是一個語音測試。如果您能聽到這個聲音，說明系統運作正常。")
+                st.success("測試語音已發送至 TJBot")
+            except Exception as e:
+                st.error(f"語音測試失敗: {str(e)}")
+        else:
+            st.error("語音合成服務未初始化")
 
 # 主要區域 - 聊天介面
 st.header("聊天對話")
@@ -349,7 +436,7 @@ if user_input:
     st.chat_message("user").write(user_input)
     with st.spinner("處理中..."):
         process_message(user_input)
-        # 頁面重新加載以顯示最新聊天歷史
+        # 重新加載頁面以顯示最新聊天歷史
         st.experimental_rerun()
 
 # 頁腳
