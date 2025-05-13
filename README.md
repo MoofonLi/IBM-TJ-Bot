@@ -29,12 +29,18 @@ network:
 git clone git@github.com:MoofonLi/IBM-TJ-Bot
 ```
 ```
+cd IBM-TJ-Bot
+```
+```
 chmod +x install_dependencies.sh
 ```
 ```
 ./install_dependencies.sh
 ```
 ### Run application
+```
+cd IBM-TJ-Bot
+```
 ```
 chmod +x start_tjbot.sh
 ```
