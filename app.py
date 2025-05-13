@@ -95,6 +95,15 @@ def test_system():
     }
     
     try:
+        # 先嘗試清理 GPIO 資源
+        try:
+            import RPi.GPIO as GPIO
+            GPIO.cleanup()
+            import time
+            time.sleep(1)  # 等待 GPIO 重置
+        except Exception as e:
+            print(f"GPIO 清理失敗: {e}")
+        
         # 初始化 Watson Assistant
         st.session_state.assistant = WatsonAssistant(
             os.getenv('ASSISTANT_APIKEY'),
@@ -139,12 +148,31 @@ def shutdown_system():
     try:
         # 關閉硬體
         if st.session_state.hardware:
-            # 關閉 LED
-            st.session_state.hardware.shine("off")
-            # 放下手臂
-            st.session_state.hardware.lower_arm()
-            # 清理GPIO
-            st.session_state.hardware.cleanup()
+            try:
+                # 關閉 LED
+                st.session_state.hardware.shine("off")
+            except Exception as e:
+                print(f"關閉 LED 失敗: {e}")
+                
+            try:
+                # 放下手臂
+                st.session_state.hardware.lower_arm()
+            except Exception as e:
+                print(f"放下手臂失敗: {e}")
+                
+            try:
+                # 清理GPIO
+                st.session_state.hardware.cleanup()
+            except Exception as e:
+                print(f"硬體清理失敗: {e}")
+            
+            try:
+                # 額外的 GPIO 清理
+                import RPi.GPIO as GPIO
+                GPIO.cleanup()
+            except Exception as e:
+                print(f"GPIO 清理失敗: {e}")
+                
             st.session_state.hardware = None
         
         # 清除 session state
@@ -184,26 +212,32 @@ def process_message(user_input):
         st.session_state.chat_history.append(("TJBot", bot_reply))
         
         # 執行硬體動作
-        if intents:
+        if intents and st.session_state.hardware:
             top_intent = intents[0]['intent']
-            if top_intent == 'wave':
-                st.session_state.hardware.wave()
-                st.info("機器人揮手 👋")
-            elif top_intent == 'lower-arm':
-                st.session_state.hardware.lower_arm()
-                st.info("機器人放下手臂 🙇")
-            elif top_intent == 'raise-arm':
-                st.session_state.hardware.raise_arm()
-                st.info("機器人舉起手臂 🙋‍♂️")
-            elif top_intent == 'shine':
-                color = next((e['value'] for e in entities if e['entity'] == 'color'), 'white')
-                st.session_state.hardware.shine(color)
-                st.info(f"機器人發光: {color} ✨")
+            try:
+                if top_intent == 'wave':
+                    st.session_state.hardware.wave()
+                    st.info("機器人揮手 👋")
+                elif top_intent == 'lower-arm':
+                    st.session_state.hardware.lower_arm()
+                    st.info("機器人放下手臂 🙇")
+                elif top_intent == 'raise-arm':
+                    st.session_state.hardware.raise_arm()
+                    st.info("機器人舉起手臂 🙋‍♂️")
+                elif top_intent == 'shine':
+                    color = next((e['value'] for e in entities if e['entity'] == 'color'), 'white')
+                    st.session_state.hardware.shine(color)
+                    st.info(f"機器人發光: {color} ✨")
+            except Exception as e:
+                st.error(f"執行硬體動作失敗: {e}")
         
         # 語音輸出（僅在 TJBot 上）
         if st.session_state.tts and bot_reply:
             with st.spinner("正在合成語音..."):
-                st.session_state.tts.speak(bot_reply)
+                try:
+                    st.session_state.tts.speak(bot_reply)
+                except Exception as e:
+                    st.error(f"語音合成失敗: {e}")
         
         return bot_reply
     else:
@@ -213,39 +247,48 @@ def process_message(user_input):
 def clear_state():
     """清除狀態回到初始狀態"""
     if st.session_state.hardware:
-        # 關閉 LED
-        st.session_state.hardware.shine("off")
-        # 放下手臂
-        st.session_state.hardware.lower_arm()
+        try:
+            # 關閉 LED
+            st.session_state.hardware.shine("off")
+        except Exception as e:
+            print(f"關閉 LED 失敗: {e}")
+            
+        try:
+            # 放下手臂
+            st.session_state.hardware.lower_arm()
+        except Exception as e:
+            print(f"放下手臂失敗: {e}")
+    
+    # 清除聊天記錄
+    st.session_state.chat_history = []
 
 # 主頁面
 def main():
     st.title("🤖 TJBot 控制台")
     
-    # 自動初始化系統
-    if st.session_state.system_status == "未初始化":
-        with st.spinner("正在初始化系統..."):
-            test_results = test_system()
-            
-            # 顯示測試結果
-            st.success("系統初始化完成") if all(test_results.values()) else st.warning("部分組件初始化失敗")
-            
-            for component, status in test_results.items():
-                st.sidebar.write(f"✅ {component}" if status else f"❌ {component}")
+    # 移除自動初始化系統部分
     
     # 側邊欄 - 狀態和控制
     with st.sidebar:
         st.header("系統狀態")
         st.write(f"狀態: {st.session_state.system_status}")
         
-        # 系統測試按鈕
-        if st.button("系統測試"):
-            with st.spinner("正在測試系統..."):
+        # 系統初始化按鈕
+        if st.button("初始化系統"):
+            with st.spinner("正在初始化系統..."):
                 test_results = test_system()
                 
                 # 顯示測試結果
+                if all(test_results.values()):
+                    st.success("系統初始化完成")
+                else:
+                    st.warning("部分組件初始化失敗")
+                
                 for component, status in test_results.items():
-                    st.write(f"✅ {component}" if status else f"❌ {component}")
+                    if status:
+                        st.write(f"✅ {component}")
+                    else:
+                        st.write(f"❌ {component}")
         
         # 關閉系統按鈕
         if st.button("關閉系統"):
@@ -291,7 +334,8 @@ def main():
                                     if user_input:
                                         # 處理訊息
                                         process_message(user_input)
-                                        st.experimental_rerun()  # 重新運行 UI
+                                        # 避免使用 st.experimental_rerun()，改用其他方式更新 UI
+                                        st.success(f"收到語音輸入: {user_input}")
                                     else:
                                         st.error("無法識別語音，請再試一次")
                                 else:
@@ -305,31 +349,43 @@ def main():
         with col1:
             if st.button("👋 揮手"):
                 if st.session_state.hardware:
-                    st.session_state.hardware.wave()
-                    st.success("已揮手")
+                    try:
+                        st.session_state.hardware.wave()
+                        st.success("已揮手")
+                    except Exception as e:
+                        st.error(f"揮手失敗: {e}")
                 else:
                     st.error("硬體未初始化")
             
             if st.button("🙋‍♂️ 舉手"):
                 if st.session_state.hardware:
-                    st.session_state.hardware.raise_arm()
-                    st.success("已舉手")
+                    try:
+                        st.session_state.hardware.raise_arm()
+                        st.success("已舉手")
+                    except Exception as e:
+                        st.error(f"舉手失敗: {e}")
                 else:
                     st.error("硬體未初始化")
         
         with col2:
             if st.button("🙇 放下手"):
                 if st.session_state.hardware:
-                    st.session_state.hardware.lower_arm()
-                    st.success("已放下手")
+                    try:
+                        st.session_state.hardware.lower_arm()
+                        st.success("已放下手")
+                    except Exception as e:
+                        st.error(f"放下手失敗: {e}")
                 else:
                     st.error("硬體未初始化")
             
             color = st.selectbox("LED 顏色", ["red", "green", "blue", "white", "off"])
             if st.button("💡 設定燈光"):
                 if st.session_state.hardware:
-                    st.session_state.hardware.shine(color)
-                    st.success(f"已設定燈光為 {color}")
+                    try:
+                        st.session_state.hardware.shine(color)
+                        st.success(f"已設定燈光為 {color}")
+                    except Exception as e:
+                        st.error(f"設定燈光失敗: {e}")
                 else:
                     st.error("硬體未初始化")
     
@@ -341,29 +397,27 @@ def main():
     with chat_container:
         for role, message in st.session_state.chat_history:
             if role == "使用者":
-                st.chat_message("user").write(message)
+                st.text_area(f"使用者", value=message, height=50, disabled=True, key=f"user_{len(st.session_state.chat_history)}_{message[:10]}")
             else:
-                st.chat_message("assistant").write(message)
+                st.text_area(f"TJBot", value=message, height=100, disabled=True, key=f"bot_{len(st.session_state.chat_history)}_{message[:10]}")
     
     # 文字輸入
-    user_input = st.chat_input("請輸入訊息...")
+    user_input = st.text_input("請輸入訊息...")
+    send_button = st.button("發送")
     
-    if user_input:
+    if send_button and user_input:
         with st.spinner("處理中..."):
             process_message(user_input)
-            # 重新運行 UI 以更新聊天記錄
-            st.experimental_rerun()
+            # 避免使用 st.experimental_rerun()
+            st.success("訊息已發送")
     
     # 清除狀態按鈕
     if st.button("清除狀態"):
         clear_state()
-        st.session_state.chat_history = []
         st.success("已清除狀態")
-        st.experimental_rerun()
     
     # 頁腳
-    st.markdown("---")
-    st.markdown("TJBot 控制台 - powered by IBM Watson AI")
+    st.text("TJBot 控制台 - powered by IBM Watson AI")
 
 if __name__ == "__main__":
     main()
