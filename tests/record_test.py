@@ -1,46 +1,51 @@
 import pyaudio
 import wave
 
-# 參數設定
-FORMAT = pyaudio.paInt16
-CHANNELS = 1
-RATE = 44100
-CHUNK = 1024
-RECORD_SECONDS = 3
-WAVE_OUTPUT_FILENAME = "output.wav"
 
-# 初始化PyAudio
-audio = pyaudio.PyAudio()
+def test_record():
+    # 參數設定
+    FORMAT = pyaudio.paInt16
+    CHANNELS = 1
+    RATE = 44100
+    CHUNK = 1024
+    RECORD_SECONDS = 3
 
-# 開啟麥克風串流
-stream = audio.open(format=FORMAT,
-                    channels=CHANNELS,
-                    rate=RATE,
-                    input=True,
-                    input_device_index=0,  # <<<<<< 指定這裡！！！！
-                    frames_per_buffer=CHUNK)
+    # 初始化PyAudio
+    audio = pyaudio.PyAudio()
 
-print("開始錄音...")
+    # 開啟麥克風串流
+    stream = audio.open(format=FORMAT,
+                        channels=CHANNELS,
+                        rate=RATE,
+                        input=True,
+                        input_device_index=0,  # <<<<<< 指定這裡！！！！
+                        frames_per_buffer=CHUNK)
 
-frames = []
+    print("開始錄音...")
 
-for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-    data = stream.read(CHUNK, exception_on_overflow=False)
-    frames.append(data)
+    frames = []
 
-print("錄音完成。")
+    for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+        data = stream.read(CHUNK, exception_on_overflow=False)
+        frames.append(data)
 
-# 停止錄音
-stream.stop_stream()
-stream.close()
-audio.terminate()
+    print("錄音完成。")
 
-# 存檔
-wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
-wf.setnchannels(CHANNELS)
-wf.setsampwidth(audio.get_sample_size(FORMAT))
-wf.setframerate(RATE)
-wf.writeframes(b''.join(frames))
-wf.close()
+    # 停止錄音
+    stream.stop_stream()
+    stream.close()
+    audio.terminate()
 
-print(f"已經把錄音存成 {WAVE_OUTPUT_FILENAME}")
+    # # 存檔
+    # wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+    # wf.setnchannels(CHANNELS)
+    # wf.setsampwidth(audio.get_sample_size(FORMAT))
+    # wf.setframerate(RATE)
+    # wf.writeframes(b''.join(frames))
+    # wf.close()
+
+    # print(f"已經把錄音存成 {WAVE_OUTPUT_FILENAME}")
+
+
+if __name__ == "__main__":
+    test_record()

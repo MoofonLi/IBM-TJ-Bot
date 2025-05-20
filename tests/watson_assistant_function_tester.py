@@ -2,13 +2,14 @@ from utils.watson_assistant import WatsonAssistant
 import os
 from dotenv import load_dotenv
 
+
 # 你的 IBM Watson Assistant 和 API 配置信息
 assistant_apikey = os.getenv('ASSISTANT_APIKEY')
 assistant_url = os.getenv('ASSISTANT_URL')
 assistant_id = os.getenv('ASSISTANT_ID')
 
 # 測試與 Watson Assistant 交互的程式
-def test_watson_assistant():
+def test_watson():
     # 初始化 WatsonAssistant 物件
     assistant = WatsonAssistant(assistant_apikey, assistant_url, assistant_id, version='2023-04-15')
     
@@ -36,6 +37,7 @@ def test_watson_assistant():
         else:
             print("No response from Assistant.")
 
-# 執行測試
+
 if __name__ == "__main__":
-    test_watson_assistant()
+    test_watson()
+
