@@ -83,12 +83,7 @@ def main():
     if 'hardware' not in st.session_state:
         st.session_state.hardware = None
 
-    # 主程式啟動時自動初始化系統
-    if st.session_state.assistant or st.session_state.tts or st.session_state.stt or st.session_state.hardware:
-            if SystemControl.initialize_system():
-                st.success("系統已初始化")
-            else:
-                st.error("系統初始化失敗")   
+    SystemControl.initialize_system()
 
     # 網頁標題配置
     st.set_page_config(
