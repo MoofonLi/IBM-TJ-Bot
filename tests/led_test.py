@@ -1,4 +1,4 @@
-from utils.rpi_ws281x import PixelStrip, Color
+from rpi_ws281x import PixelStrip, Color
 
 
 def test_led():
