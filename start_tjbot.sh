@@ -11,7 +11,7 @@ pyenv local 3.11.2
 # 檢查虛擬環境是否存在
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
-    python -m venv .venv
+    python3 -m venv .venv
 fi
 
 # 啟動虛擬環境
