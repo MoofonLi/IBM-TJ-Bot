@@ -46,6 +46,9 @@ chmod +x install_dependencies.sh
 ```
 ./install_dependencies.sh
 ```
+```
+source ~/.bashrc
+```
 ### Run application
 ```
 cd IBM-TJ-Bot

@@ -3,15 +3,26 @@
 # 安裝系統依賴
 echo "Installing system dependencies..."
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip ffmpeg portaudio19-dev python3-pyaudio 
+sudo apt install -y make build-essential libssl-dev zlib1g-dev \
+    libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
+    libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev \
+    libffi-dev liblzma-dev python-openssl git ffmpeg portaudio19-dev python3-pyaudio
 
-# # 安裝 ngrok（如果還沒安裝）
-# if ! command -v ngrok &> /dev/null; then
-#     echo "Installing ngrok..."
-#     # 下載 ngrok（ARM 版本適合樹莓派）
-#     wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm.tgz
-#     sudo tar xzf ngrok-v3-stable-linux-arm.tgz -C /usr/local/bin
-#     rm ngrok-v3-stable-linux-arm.tgz
-# fi
+# 安裝 pyenv（如果尚未安裝）
+if [ ! -d "$HOME/.pyenv" ]; then
+    echo "Installing pyenv..."
+    curl https://pyenv.run | bash
+
+    echo "Configuring pyenv environment..."
+    echo -e '\n# pyenv setup' >> ~/.bashrc
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+    echo 'eval "$(pyenv init -)"' >> ~/.bashrc
+    echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
+
+    echo "Please restart your terminal or run: source ~/.bashrc"
+else
+    echo "pyenv already installed."
+fi
 
 echo "System dependencies installed successfully!"

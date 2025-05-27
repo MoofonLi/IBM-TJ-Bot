@@ -4,6 +4,18 @@
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd "$PROJECT_DIR"
 
+# 載入 pyenv（如果沒從 shell 啟動會失敗）
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+
+# 確保已安裝 Python 3.11.2
+if ! pyenv versions | grep -q "3.11.2"; then
+    echo "Installing Python 3.11.2 with pyenv..."
+    pyenv install 3.11.2
+fi
+
 # 設置 Python 3.11.2 為當前目錄的預設版本
 echo "Setting Python 3.11.2 for this project..."
 pyenv local 3.11.2
@@ -11,7 +23,7 @@ pyenv local 3.11.2
 # 檢查虛擬環境是否存在
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
-    python3 -m venv .venv
+    python -m venv .venv
 fi
 
 # 啟動虛擬環境
@@ -45,23 +57,6 @@ fi
 echo "Loading environment variables..."
 source .env
 
-# # 設置 ngrok 認證 (使用 sudo -E 保留環境變數)
-# if [ -n "$NGROK_AUTHTOKEN" ]; then
-#     echo "Setting up ngrok authentication..."
-#     sudo -E ngrok config add-authtoken "$NGROK_AUTHTOKEN"
-# else
-#     echo "Error: NGROK_AUTHTOKEN not found in .env file!"
-#     exit 1
-# fi
-
-# 使用 sudo -E 啟動 Streamlit 應用，以確保有適當權限訪問硬體
+# 啟動 Streamlit
 echo "Starting TJBot Controller with admin privileges..."
 sudo -E $(which streamlit) run app.py --server.port 8501 --server.headless true &
-
-# # 等待應用啟動
-# echo "Waiting for application to start..."
-# sleep 5
-
-# # 使用 sudo -E 啟動 ngrok 隧道，確保有適當權限和環境變數
-# echo "Starting ngrok tunnel with admin privileges..."
-# sudo -E ngrok http 8501
