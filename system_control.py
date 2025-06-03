@@ -22,7 +22,8 @@ class SystemControl:
     def initialize_system():
         """初始化系統"""
         try:
-            # 測試 Watson Assistant
+
+            # Watson Assistant
             st.session_state.assistant = WatsonAssistant(
                 os.getenv('ASSISTANT_APIKEY'),
                 os.getenv('ASSISTANT_URL'),
@@ -30,7 +31,7 @@ class SystemControl:
                 version='2023-04-15'
             )
             
-            # 測試 Text to Speech
+            # Text to Speech
             st.session_state.tts = TextToSpeech(
                 os.getenv('TTS_APIKEY'),
                 os.getenv('TTS_URL')
@@ -43,11 +44,11 @@ class SystemControl:
             )
             
             st.session_state.hardware = HardwareControl()
-            st.session_state.hardware.lower_arm()
 
             return True
 
         except Exception as e:
+            print(f"{e}")
             return False
         
 
@@ -85,4 +86,7 @@ class SystemControl:
         st.session_state.tts = None
         st.session_state.stt = None
         st.session_state.hardware = None
+
+        HardwareControl.cleanup()
+
         return True

@@ -83,8 +83,6 @@ def main():
     if 'hardware' not in st.session_state:
         st.session_state.hardware = None
 
-    SystemControl.initialize_system()
-
     # 網頁標題配置
     st.set_page_config(
     page_title="TJBot 控制台",
@@ -99,30 +97,33 @@ def main():
     # 側邊欄
     with st.sidebar:
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("測試系統"):
-                with st.spinner("正在測試系統..."):
-                    if SystemControl.test_system():
-                        st.success("系統測試通過！")
-                    else:
-                        st.error("系統測試失敗")
+        # 硬體控制
+        st.header("硬體控制")
 
-        with col2:
-            if st.button("關閉系統"):
+        # if st.button("測試系統"):
+        #         with st.spinner("正在測試系統..."):
+        #             if SystemControl.test_system():
+        #                 st.success("系統測試通過！")
+        #             else:
+        #                 st.error("系統測試失敗")
+
+        if st.button("初始化系統"):
+                with st.spinner("正在初始化系統..."):
+                    if SystemControl.initialize_system():
+                        st.success("系統初始化通過！")
+                    else:
+                        st.error("系統初始化失敗")
+
+        if st.button("關閉系統"):
                 with st.spinner("正在關閉系統..."):
                     if SystemControl.shutdown_system():
                         st.success("系統已安全關閉")
                     else:
                         st.error("系統關閉失敗")
-
-        # 硬體控制
-        st.header("硬體控制")
-
+                        
         # 燈光控制
-        st.subheader("燈光控制")
-        colors = ["red", "green", "blue", "white", "off"]
-        color = st.selectbox("選擇顏色", colors)
+        colors = ["red", "green", "blue", "white", "yellow", "purple", "orange" "off"]
+        color = st.selectbox("選擇燈光顏色", colors)
         if color:
             if st.session_state.hardware:
                 st.session_state.hardware.shine(color)       
@@ -133,24 +134,20 @@ def main():
             if st.button("👋 揮手"):
                 if st.session_state.hardware:
                     st.session_state.hardware.wave()
-                    st.session_state.hardware.cleanup()
             
             if st.button("🙋‍♂️ 舉手"):
                 if st.session_state.hardware:
                     st.session_state.hardware.raise_arm()
-                    st.session_state.hardware.cleanup()
 
         with col2:
             if st.button("🙇 放下手"):
                 if st.session_state.hardware:
                     st.session_state.hardware.lower_arm()
-                    st.session_state.hardware.cleanup()
+                    
 
             if st.button("🕺 跳舞"):
                 if st.session_state.hardware:
-                    for i in range(4):
-                        st.session_state.hardware.wave()
-                        st.session_state.hardware.shine(colors[i])
+                    st.session_state.hardware.dance()
 
         # 語音輸入按鈕
         st.header("語音輸入")
@@ -182,7 +179,7 @@ def main():
 
     # 顯示聊天歷史
     for role, message in st.session_state.chat_history:
-        if role == "使用者":
+        if role == "user":
             st.chat_message("user").write(message)
         else:
             st.chat_message("assistant").write(message)
