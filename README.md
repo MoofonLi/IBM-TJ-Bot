@@ -41,7 +41,7 @@ git clone https://github.com/MoofonLi/IBM-TJ-Bot
 cd IBM-TJ-Bot
 ```
 ```
-chmod +x install_dependencies.sh
+chmod +x install_dependencies.sh start_tjbot.sh
 ```
 ```
 ./install_dependencies.sh
@@ -49,20 +49,15 @@ chmod +x install_dependencies.sh
 ```
 source ~/.bashrc
 ```
+```
+./start_tjbot.sh
+```
 ### Run application
 ```
 cd IBM-TJ-Bot
 ```
 ```
 chmod +x start_tjbot.sh
-```
-```
-./start_tjbot.sh
-```
-
-# Follow the steps below to run after first run:
-```
-ssh pi@your-ip-address
 ```
 ```
 ./start_tjbot.sh
