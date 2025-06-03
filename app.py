@@ -184,9 +184,9 @@ def main():
     user_input = st.chat_input("請輸入訊息或使用左側語音按鈕...")
 
     if user_input:
+        st.session_state.chat_history.append(("user", user_input))
+        st.chat_message("user").write(user_input)
         with st.spinner("處理中..."):
-            st.session_state.chat_history.append(("user", user_input))
-            st.chat_message("user").write(user_input)
             process_message(user_input)
 
 
