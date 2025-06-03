@@ -3,7 +3,7 @@
 # 安裝系統依賴
 echo "Installing system dependencies..."
 sudo apt update
-sudo apt install -y ffmpeg portaudio19-dev python3-pyaudio
+sudo apt install -y libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0 python3-dev libffi-dev build-essential ffmpeg
 
 # # 安裝 ngrok（如果還沒安裝）
 # if ! command -v ngrok &> /dev/null; then
