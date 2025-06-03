@@ -37,6 +37,7 @@ class HardwareControl:
         time.sleep(0.2)
         self.servo.ChangeDutyCycle(7.5)  # 回到中間位置
         time.sleep(0.2)
+        self.stop_servo_signal()
 
 
     def lower_arm(self):

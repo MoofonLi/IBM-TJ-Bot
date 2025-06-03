@@ -107,14 +107,14 @@ def main():
         #             else:
         #                 st.error("系統測試失敗")
 
-        if st.button("初始化系統"):
+        if st.button("初始化系統", use_container_width=True):
                 with st.spinner("正在初始化系統..."):
                     if SystemControl.initialize_system():
                         st.success("系統初始化通過！")
                     else:
                         st.error("系統初始化失敗")
 
-        if st.button("關閉系統"):
+        if st.button("關閉系統", use_container_width=True):
                 with st.spinner("正在關閉系統..."):
                     if SystemControl.shutdown_system():
                         st.success("系統已安全關閉")
@@ -122,7 +122,7 @@ def main():
                         st.error("系統關閉失敗")
                         
         # 燈光控制
-        colors = ["red", "green", "blue", "white", "yellow", "purple", "orange" "off"]
+        colors = ["red", "green", "blue", "white", "yellow", "purple", "orange", "off"]
         color = st.selectbox("選擇燈光顏色", colors)
         if color:
             if st.session_state.hardware:

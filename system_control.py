@@ -87,6 +87,5 @@ class SystemControl:
         st.session_state.stt = None
         st.session_state.hardware = None
 
-        HardwareControl.cleanup()
 
         return True

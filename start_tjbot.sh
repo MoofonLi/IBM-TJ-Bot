@@ -1,67 +1,60 @@
 #!/bin/bash
 
-# 設定專案目錄
+# ====== 路徑設定 ======
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd "$PROJECT_DIR"
 
-# 設置 Python 3.11.2 為當前目錄的預設版本
-echo "Setting Python 3.11.2 for this project..."
-pyenv local 3.11.2
+# ====== pyenv 初始化（如果有）======
+if command -v pyenv >/dev/null 2>&1; then
+    echo "Initializing pyenv..."
+    export PATH="$HOME/.pyenv/bin:$PATH"
+    eval "$(pyenv init -)"
+    eval "$(pyenv virtualenv-init -)"
 
-# 檢查虛擬環境是否存在
+    # 確保使用 3.11.2
+    if ! pyenv versions | grep -q "3.11.2"; then
+        echo "Installing Python 3.11.2..."
+        pyenv install 3.11.2
+    fi
+
+    echo "Setting Python 3.11.2 locally..."
+    pyenv local 3.11.2
+else
+    echo "⚠️ pyenv not found. Please install pyenv first!"
+    exit 1
+fi
+
+# ====== 建立虛擬環境 ======
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
     python -m venv .venv
 fi
 
-# 啟動虛擬環境
+# ====== 啟動虛擬環境 ======
 echo "Activating virtual environment..."
 source .venv/bin/activate
 
-# 確保 pip 是最新的
+# ====== pip 套件管理 ======
 echo "Upgrading pip..."
 pip install --upgrade pip
 
-# 檢查系統依賴是否安裝
-if ! command -v ffmpeg &> /dev/null; then
-    echo "Error: ffmpeg is not installed!"
-    echo "Please run install_dependencies.sh first:"
-    echo "chmod +x install_dependencies.sh && ./install_dependencies.sh"
-    exit 1
-fi
-
-# 檢查並安裝 Python 套件
-echo "Checking and installing Python dependencies..."
+echo "Installing Python dependencies..."
 pip install -r requirements.txt
 
-# 檢查 .env 文件是否存在
+# ====== 檢查 .env 檔案 ======
 if [ ! -f ".env" ]; then
-    echo "Error: .env file not found!"
-    echo "Please create .env file with your API credentials"
+    echo "❌ .env file not found. Please create it first!"
     exit 1
 fi
 
-# 載入 .env 檔案中的變數
+# ====== 載入環境變數 ======
 echo "Loading environment variables..."
 source .env
 
-# # 設置 ngrok 認證 (使用 sudo -E 保留環境變數)
-# if [ -n "$NGROK_AUTHTOKEN" ]; then
-#     echo "Setting up ngrok authentication..."
-#     sudo -E ngrok config add-authtoken "$NGROK_AUTHTOKEN"
-# else
-#     echo "Error: NGROK_AUTHTOKEN not found in .env file!"
-#     exit 1
-# fi
+# ====== 確保提前輸入密碼 ======
+echo "Requesting sudo password..."
+sudo true
 
-# 使用 sudo -E 啟動 Streamlit 應用，以確保有適當權限訪問硬體
-echo "Starting TJBot Controller with admin privileges..."
-sudo -E $(which streamlit) run app.py --server.port 8501 --server.headless true &
-
-# # 等待應用啟動
-# echo "Waiting for application to start..."
-# sleep 5
-
-# # 使用 sudo -E 啟動 ngrok 隧道，確保有適當權限和環境變數
-# echo "Starting ngrok tunnel with admin privileges..."
-# sudo -E ngrok http 8501
+# ====== 啟動 Streamlit 應用 ======
+echo "Starting TJBot Controller..."
+sudo -E $(which streamlit) run app.py --server.port 8501 --server.headless true
