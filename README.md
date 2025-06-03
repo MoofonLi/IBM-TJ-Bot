@@ -62,3 +62,14 @@ chmod +x start_tjbot.sh
 ```
 ./start_tjbot.sh
 ```
+
+### 清理 streamlit 進程
+```
+ps aux | grep streamlit
+```
+```
+sudo kill -TERM <PID>
+```
+
+### Git Pull (本地與遠端變更衝突)
+git checkout -- start_tjbot.sh && git pull origin main
