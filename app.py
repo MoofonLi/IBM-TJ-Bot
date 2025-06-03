@@ -23,9 +23,6 @@ def process_message(user_input):
         entities = response.get('output', {}).get('entities', [])
         response_texts = response.get('output', {}).get('generic', [])
         
-        # 保存對話歷史 - 用戶輸入
-        st.session_state.chat_history.append(("user", user_input))
-        
         # 像原始代碼一樣逐條處理回應文字
         for text in response_texts:
             if text['response_type'] == 'text':
@@ -35,7 +32,6 @@ def process_message(user_input):
                 st.session_state.chat_history.append(("assistant", bot_reply))
 
                 # 顯示於chat介面
-                st.chat_message("user").write(user_input)
                 st.chat_message("assistant").write(bot_reply)
                 
                 # 語音輸出 - 直接在TJBot上播放
@@ -86,6 +82,7 @@ def main():
     # 網頁標題配置
     st.set_page_config(
     page_title="TJBot Control Web",
+    page_icon="🤖",
     layout="wide"
     )
 
@@ -109,19 +106,19 @@ def main():
         if st.button("初始化系統", use_container_width=True):
                 with st.spinner("正在初始化系統..."):
                     if SystemControl.initialize_system():
-                        st.success("系統初始化通過！")
+                        st.success("系統已初始化")
                     else:
                         st.error("系統初始化失敗")
 
         if st.button("關閉系統", use_container_width=True):
                 with st.spinner("正在關閉系統..."):
                     if SystemControl.shutdown_system():
-                        st.success("系統已安全關閉")
+                        st.success("系統已關閉")
                     else:
                         st.error("系統關閉失敗")
                         
         # 燈光控制
-        colors = ["red", "green", "blue", "white", "yellow", "purple", "orange", "off"]
+        colors = ["off", "red", "green", "blue", "white", "yellow", "purple", "orange"]
         color = st.selectbox("選擇燈光顏色", colors)
         if color:
             if st.session_state.hardware:
@@ -164,15 +161,17 @@ def main():
                 st.info("錄音已停止，正在處理...")
                 if st.session_state.stt:
                     user_input = st.session_state.stt.listen().strip()
+                    st.session_state.chat_history.append(("user", user_input))
+                    st.chat_message("user").write(user_input)
                     process_message(user_input)
 
-        if st.button("清除對話"):
+        if st.button("清除對話", use_container_width=True):
             st.session_state.chat_history = []
-            st.rerun()
+            st.experimental_rerun()
 
 
     # 主要區域 - 聊天介面
-    st.header("聊天對話")
+    st.header("聊天&對話")
         
     # 顯示聊天歷史
     for role, message in st.session_state.chat_history:
@@ -185,6 +184,9 @@ def main():
     user_input = st.chat_input("請輸入訊息或使用左側語音按鈕...")
 
     if user_input:
+        with st.spinner("處理中..."):
+            st.session_state.chat_history.append(("user", user_input))
+            st.chat_message("user").write(user_input)
             process_message(user_input)
 
 
