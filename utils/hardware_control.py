@@ -76,11 +76,11 @@ class HardwareControl:
 
 
     def dance(self):
-        """執行一個完整的跳舞動作"""
+        """跳舞"""
         print("Dancing...")
-        colors = ["red", "green", "blue", "white", "yellow", "purple", "orange" "off"]
+        colors = ["red", "green", "blue", "white", "yellow", "purple", "orange"]
         
-        for i in range(3):
+        for i in range(7):
             # 揮手動作
             self.servo.ChangeDutyCycle(7.5)  # 中間
             time.sleep(0.2)

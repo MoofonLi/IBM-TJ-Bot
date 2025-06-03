@@ -7,7 +7,7 @@ from system_control import SystemControl
 def process_message(user_input):
     """處理使用者訊息並執行相應動作"""
     if not st.session_state.assistant:
-        st.error("服務尚未初始化！請先測試系統")
+        st.error("服務尚未初始化！")
         return
     
     if not user_input or user_input.strip() == "":
@@ -85,14 +85,13 @@ def main():
 
     # 網頁標題配置
     st.set_page_config(
-    page_title="TJBot 控制台",
-    page_icon="🤖",
+    page_title="TJBot Control Web",
     layout="wide"
     )
 
     # 主要介面
-    st.title("🤖 TJBot 控制台")
-    st.write("透過文字或語音與 TJBot 互動")
+    # st.title("🤖 TJBot 控制台")
+    # st.write("透過文字或語音與 TJBot 互動")
 
     # 側邊欄
     with st.sidebar:
@@ -150,7 +149,7 @@ def main():
                     st.session_state.hardware.dance()
 
         # 語音輸入按鈕
-        st.header("語音輸入")
+        st.header("聊天控制")
         if 'is_recording' not in st.session_state:
             st.session_state.is_recording = False
 
@@ -167,16 +166,14 @@ def main():
                     user_input = st.session_state.stt.listen().strip()
                     process_message(user_input)
 
-    # 主要區域 - 聊天介面
-    st.header("聊天對話")
-
-    # 聊天歷史控制
-    col1, col2 = st.columns([4, 1])
-    with col2:
         if st.button("清除對話"):
             st.session_state.chat_history = []
             st.rerun()
 
+
+    # 主要區域 - 聊天介面
+    st.header("聊天對話")
+        
     # 顯示聊天歷史
     for role, message in st.session_state.chat_history:
         if role == "user":
@@ -188,13 +185,12 @@ def main():
     user_input = st.chat_input("請輸入訊息或使用左側語音按鈕...")
 
     if user_input:
-        with st.spinner("處理中..."):
             process_message(user_input)
 
 
-    # 頁腳
-    st.markdown("---")
-    st.markdown("TJBot 控制台 - 由 IBM Watson AI 支援")
+    # # 頁腳
+    # st.markdown("---")
+    # st.markdown("TJBot 控制台 - 由 IBM watsonx AI 支援")
 
 
 
