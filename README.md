@@ -62,7 +62,11 @@ chmod +x start_tjbot.sh
 ```
 ./start_tjbot.sh
 ```
-
+## ERROR
+### host key change
+```
+ssh-keygen -R 192.168.8.108
+```
 ### 清理 streamlit 進程
 ```
 ps aux | grep streamlit
