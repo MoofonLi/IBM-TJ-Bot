@@ -26,10 +26,10 @@ network:
 ```
 ### Install system dependencies
 ```
-sudo apt upgrade
-```
-```
 sudo apt update
+```
+```
+sudo apt upgrade
 ```
 ```
 sudo apt install git -y
