@@ -9,20 +9,20 @@ sudo nano /etc/netplan/50-cloud-init.yaml
 ```
 ```
 network:
-  version: 2
-  wifis:
-    wlan0:
-      optional: true
-      dhcp4: true
-      access-points:
-        "Example Wifi":
-          auth:
-            key-management: "psk"
-            password: "Example Wifi"
-        "New Wifi":
-          auth:
-            key-management: "psk"
-            password: "New Password"
+    version: 2
+    wifis:
+        renderer: networkd
+        wlan0:
+            access-points:
+                Original Wifi:
+                    password: 3499433eb6938b425aca017d84c9636a9964710fe2ca45ef0>
+                "New Wifi":
+                    password: <pw>
+            dhcp4: true
+            optional: true
+```
+```
+sudo netplan apply
 ```
 ### Install system dependencies
 ```
@@ -76,4 +76,6 @@ sudo kill -TERM <PID>
 ```
 
 ### Git Pull (本地與遠端變更衝突)
+```
 git checkout -- start_tjbot.sh && git pull origin main
+```
