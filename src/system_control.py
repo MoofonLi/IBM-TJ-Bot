@@ -3,16 +3,10 @@ import os
 from dotenv import load_dotenv
 import time
 
-from utils.watson_assistant import WatsonAssistant
-from utils.text_to_speech import TextToSpeech
-from utils.speech_to_text import SpeechToText
-from utils.hardware_control import HardwareControl
-
-from tests.hardware_test import test_hardware
-from tests.led_test import test_led
-from tests.record_test import test_record
-from tests.watson_assistant_function_tester import test_watson
-
+from watson_assistant import WatsonAssistant
+from text_to_speech import TextToSpeech
+from speech_to_text import SpeechToText
+from hardware_control import HardwareControl
 
 
 load_dotenv()

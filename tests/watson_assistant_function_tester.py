@@ -1,4 +1,4 @@
-from utils.watson_assistant import WatsonAssistant
+from watson_assistant import WatsonAssistant
 import os
 from dotenv import load_dotenv
 

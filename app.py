@@ -1,7 +1,7 @@
 import streamlit as st
 from dotenv import load_dotenv
 import asyncio
-from system_control import SystemControl
+from src.system_control import SystemControl
 
 
 def process_message(user_input):
@@ -86,22 +86,11 @@ def main():
     layout="wide"
     )
 
-    # 主要介面
-    # st.title("🤖 TJBot 控制台")
-    # st.write("透過文字或語音與 TJBot 互動")
-
     # 側邊欄
     with st.sidebar:
 
         # 硬體控制
         st.header("硬體控制")
-
-        # if st.button("測試系統"):
-        #         with st.spinner("正在測試系統..."):
-        #             if SystemControl.test_system():
-        #                 st.success("系統測試通過！")
-        #             else:
-        #                 st.error("系統測試失敗")
 
         if st.button("初始化系統", use_container_width=True):
                 with st.spinner("正在初始化系統..."):
@@ -124,6 +113,7 @@ def main():
             if st.session_state.hardware:
                 st.session_state.hardware.shine(color)       
 
+        # 動作控制
         col1, col2 = st.columns(2)
 
         with col1:
@@ -165,6 +155,7 @@ def main():
                     st.chat_message("user").write(user_input)
                     process_message(user_input)
 
+        # 清除對話按鈕
         if st.button("清除對話", use_container_width=True):
             st.session_state.chat_history = []
             st.experimental_rerun()
@@ -186,14 +177,7 @@ def main():
     if user_input:
         st.session_state.chat_history.append(("user", user_input))
         st.chat_message("user").write(user_input)
-        with st.spinner("處理中..."):
-            process_message(user_input)
-
-
-    # # 頁腳
-    # st.markdown("---")
-    # st.markdown("TJBot 控制台 - 由 IBM watsonx AI 支援")
-
+        process_message(user_input)
 
 
 if __name__ == "__main__": 
