@@ -1,4 +1,4 @@
-from hardware_control import HardwareControl
+from src.hardware_control import HardwareControl
 import time
 
 def test_hardware():

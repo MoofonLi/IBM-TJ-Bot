@@ -46,19 +46,6 @@ class SystemControl:
             return False
         
 
-    def test_system():
-        """測試系統"""
-        try:
-            test_hardware()
-            test_led()
-            test_record()
-            test_watson()
-            return True
-
-        except Exception as e:
-            return False
-        
-
     def shutdown_system():
         """關閉系統和清理資源"""
         if st.session_state.hardware:

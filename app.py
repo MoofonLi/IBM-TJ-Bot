@@ -1,6 +1,5 @@
 import streamlit as st
 from dotenv import load_dotenv
-import asyncio
 from src.system_control import SystemControl
 
 
