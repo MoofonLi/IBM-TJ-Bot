@@ -107,12 +107,7 @@ def main():
                         
         # 燈光控制
         colors = ["off", "red", "green", "blue", "white", "yellow", "purple", "orange"]
-        color = st.selectbox(
-            "選擇燈光顏色", 
-            colors, 
-            index=None,  # 預設不選擇任何選項
-            placeholder="請選擇顏色..."
-        )
+        color = st.selectbox("選擇燈光顏色", colors)
         if color:
             if st.session_state.hardware:
                 st.session_state.hardware.shine(color)       
