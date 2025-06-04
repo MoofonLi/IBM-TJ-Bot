@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import time
 
 from src.watson_assistant import WatsonAssistant
-from src.ext_to_speech import TextToSpeech
+from src.text_to_speech import TextToSpeech
 from src.speech_to_text import SpeechToText
 from src.hardware_control import HardwareControl
 
