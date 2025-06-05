@@ -1,5 +1,6 @@
 # Follow the steps below to run in first time:
-
+### Handbook
+https://illustrious-soup-639.notion.site/AI-challenger-camp-HUB-1ed3de23d5a580f5b403f8b53a614e8a
 ### Network config and connection
 ```
 ssh pi@your-ip-address
