@@ -19,6 +19,6 @@ class TextToSpeech:
                 ).get_result()
                 audio_file.write(response.content)
             print("Audio file saved as response.wav")
-            os.system("aplay -D plughw:2,0 response.wav")
+            os.system("aplay -D plughw:3,0 response.wav")
         except Exception as e:
             print(f"Error in TTS: {e}")

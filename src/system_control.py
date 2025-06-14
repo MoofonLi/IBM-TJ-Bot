@@ -37,7 +37,7 @@ class SystemControl:
                 os.getenv('STT_URL')
             )
             
-            st.session_state.hardware = HardwareControl()
+            st.session_state.hardware = HardwareControl(led_count=1, led_pin=18)
 
             return True
 
