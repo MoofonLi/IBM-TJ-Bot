@@ -29,7 +29,7 @@ eval "$(pyenv virtualenv-init -)"
 # 安裝 Python 3.11.2（如果尚未安裝）
 if ! pyenv versions | grep -q "3.11.2"; then
     echo "Installing Python 3.11.2 with pyenv..."
-    pyenv install 3.11.2
+    pyenv install -v 3.11.2
 else
     echo "Python 3.11.2 already installed via pyenv."
 fi
