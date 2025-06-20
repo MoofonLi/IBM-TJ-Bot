@@ -18,7 +18,7 @@ class HardwareControl:
 
         # 初始化 Neopixel LED (按照第一段代碼的方式)
         self.led_count = led_count
-        self.pixels = neopixel.NeoPixel(led_pin, led_count, brightness=1.0, auto_write=False, pixel_order=neopixel.RGB)
+        self.pixels = neopixel.NeoPixel(board.D18, led_count, brightness=1.0, auto_write=False, pixel_order=neopixel.RGB)
 
     def stop_servo_signal(self):
         """停止伺服馬達的PWM信號以避免抖動"""
