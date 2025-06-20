@@ -23,6 +23,13 @@ network:
             optional: true
 ```
 ```
+sudo nano /boot/firmware/config.txt
+```
+```
+# Enable audio (loads snd_bcm2835)
+dtparam=audio=off
+```
+```
 sudo netplan apply
 ```
 ### Install system dependencies
