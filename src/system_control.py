@@ -2,6 +2,7 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 import time
+import RPi.GPIO as GPIO
 
 from src.watson_assistant import WatsonAssistant
 from src.text_to_speech import TextToSpeech
@@ -16,6 +17,9 @@ class SystemControl:
     def initialize_system():
         """初始化系統"""
         try:
+
+            GPIO.setwarnings(False)
+            GPIO.cleanup()
 
             # Watson Assistant
             st.session_state.assistant = WatsonAssistant(
