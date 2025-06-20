@@ -10,73 +10,56 @@ class SpeechToText:
         authenticator = IAMAuthenticator(apikey)
         self.speech_to_text = SpeechToTextV1(authenticator=authenticator)
         self.speech_to_text.set_service_url(url)
-        self.input_device_index = None
-        self.sample_rate = None
-        self._find_usb_microphone()
-
-    def _find_usb_microphone(self):
-        """自動尋找 USB PnP Sound Device 麥克風"""
-        devices = sd.query_devices()
-        print("錄音裝置列表")
-        for i, d in enumerate(devices):
-            if d['max_input_channels'] > 0:
-                print(f"{i}: {d['name']}")
-
-        # 自動尋找 USB PnP Sound Device
-        for i, device in enumerate(devices):
-            if "USB PnP Sound Device" in device['name'] and device['max_input_channels'] > 0:
-                self.input_device_index = i
-                self.sample_rate = int(device['default_samplerate'])
-                print(f"已自動選擇錄音裝置: {device['name']} (index {i})")
-                print(f"採樣率: {self.sample_rate}")
-                return
-
-        print("未找到 USB 麥克風，使用預設錄音裝置")
-        self.input_device_index = None
-        self.sample_rate = 44100  # 預設採樣率
 
     def start_microphone(self):
         """檢查麥克風是否準備好"""
-        try:
-            if self.input_device_index is not None:
-                print("麥克風已準備好")
-                return True
-            else:
-                print("未找到指定的麥克風")
-                return False
-        except Exception as e:
-            print(f"麥克風準備失敗: {e}")
-            return False
+        return True
 
     def listen(self):
-        """從麥克風捕獲語音，先存檔再識別"""
+        """從麥克風捕獲語音，完全按照您的測試程式邏輯"""
         try:
+            # ===== 完全複製您的測試程式邏輯 =====
             duration = 5  # 錄音秒數
             filename = "temp_recording.wav"
-            
-            print("開始錄音...")
-            
-            # 使用與您的測試程式完全相同的錄音邏輯
-            recording = sd.rec(
-                int(duration * self.sample_rate), 
-                samplerate=self.sample_rate, 
-                channels=1, 
-                dtype='int16', 
-                device=self.input_device_index
-            )
+
+            # 列出錄音裝置
+            devices = sd.query_devices()
+            print("錄音裝置列表")
+            for i, d in enumerate(devices):
+                if d['max_input_channels'] > 0:
+                    print(f"{i}: {d['name']}")
+
+            # 自動尋找 USB PnP Sound Device (你的麥克風)
+            input_index = None
+            for i, device in enumerate(devices):
+                if "USB PnP Sound Device" in device['name'] and device['max_input_channels'] > 0:
+                    input_index = i
+                    print(f"已自動選擇錄音裝置: {device['name']} (index {i})")
+                    break
+
+            if input_index is None:
+                print("沒有找到 USB 麥克風，請確認是否插好。")
+                return ""
+
+            # 取得錄音裝置支援的預設採樣率
+            fs = int(devices[input_index]['default_samplerate'])
+
+            print("開始錄音")
+            recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16', device=input_index)
             sd.wait()
             print("錄音結束")
 
-            # 儲存成 wav 檔案（與您的測試程式相同）
-            wavfile.write(filename, self.sample_rate, recording)
+            # 儲存成 wav
+            wavfile.write(filename, fs, recording)
             print(f"錄音已儲存為 {filename}")
+            # ===== 您的測試程式邏輯結束 =====
             
-            # 檢查檔案是否存在和大小
+            # 檢查檔案大小
             if os.path.exists(filename):
                 file_size = os.path.getsize(filename)
                 print(f"檔案大小: {file_size} bytes")
                 
-                if file_size > 1000:  # 如果檔案大於 1KB，應該有錄到聲音
+                if file_size > 1000:  # 如果檔案大於 1KB
                     print("檔案看起來正常，開始進行語音識別...")
                     
                     # 讀取 wav 檔案並送給 STT
@@ -97,9 +80,12 @@ class SpeechToText:
                         return transcript
                     else:
                         print("No speech detected.")
+                        # 保留檔案以供檢查
+                        print(f"保留錄音檔案 {filename} 以供檢查")
                         return ""
                 else:
                     print("警告：錄音檔案太小，可能沒有錄到聲音")
+                    print(f"保留錄音檔案 {filename} 以供檢查")
                     return ""
             else:
                 print("錯誤：錄音檔案未建立")
@@ -107,9 +93,6 @@ class SpeechToText:
                 
         except Exception as e:
             print(f"Error during recording or Speech to Text: {e}")
-            # 如果出錯，也要清理臨時檔案
-            if os.path.exists("temp_recording.wav"):
-                os.remove("temp_recording.wav")
             return ""
 
     def recognize_audio(self, audio_data, content_type='audio/webm'):
@@ -131,5 +114,5 @@ class SpeechToText:
             return ""
 
     def stop_microphone(self):
-        """停止麥克風（sounddevice 不需要特別處理）"""
+        """停止麥克風"""
         print("麥克風已停止")
