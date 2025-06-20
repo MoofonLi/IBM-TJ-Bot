@@ -1,138 +1,74 @@
-import sounddevice as sd
-import numpy as np
+import pyaudio
 from ibm_watson import SpeechToTextV1
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
-import io
-import wave
 
 class SpeechToText:
     def __init__(self, apikey, url):
         authenticator = IAMAuthenticator(apikey)
         self.speech_to_text = SpeechToTextV1(authenticator=authenticator)
         self.speech_to_text.set_service_url(url)
-        self.input_device_index = None
-        self.sample_rate = 16000  # Watson STT 建議使用 16kHz
+        self.audio = pyaudio.PyAudio()
+        self.stream = None
+        self.input_device_index = self._find_usb_microphone()
+
+    def _find_usb_microphone(self):
+        """自動尋找 USB PnP Sound Device 麥克風"""
+        info = self.audio.get_host_api_info_by_index(0)
+        numdevices = info.get('deviceCount')
         
+        for i in range(0, numdevices):
+            device_info = self.audio.get_device_info_by_host_api_device_index(0, i)
+            if (device_info.get('maxInputChannels') > 0 and 
+                "USB PnP Sound Device" in device_info.get('name')):
+                print(f"找到 USB 麥克風: {device_info.get('name')} (index {i})")
+                return i
+        
+        print("未找到 USB 麥克風，使用預設錄音裝置")
+        return None  # 使用預設裝置
+
     def start_microphone(self):
-        """尋找並設定 USB 麥克風"""
         try:
-            # 列出所有音訊設備
-            devices = sd.query_devices()
-            print("可用的音訊設備：")
-            for i, device in enumerate(devices):
-                if device['max_input_channels'] > 0:
-                    print(f"{i}: {device['name']} - 輸入通道: {device['max_input_channels']}")
-            
-            # 自動尋找 USB PnP Sound Device (你的麥克風)
-            self.input_device_index = None
-            for i, device in enumerate(devices):
-                if "USB PnP Sound Device" in device['name'] and device['max_input_channels'] > 0:
-                    self.input_device_index = i
-                    print(f"已選擇錄音裝置: {device['name']} (index {i})")
-                    break
-            
-            # 如果沒找到 USB PnP Sound Device，尋找其他 USB 麥克風
-            if self.input_device_index is None:
-                for i, device in enumerate(devices):
-                    if ("USB" in device['name'] or "Microphone" in device['name']) and device['max_input_channels'] > 0:
-                        self.input_device_index = i
-                        print(f"已選擇錄音裝置: {device['name']} (index {i})")
-                        break
-            
-            # 如果還是沒找到，使用預設設備
-            if self.input_device_index is None:
-                self.input_device_index = sd.default.device[0]
-                print(f"使用預設錄音設備 (index {self.input_device_index})")
-            
-            print(f"使用採樣率: {self.sample_rate} Hz")
+            self.stream = self.audio.open(
+                format=pyaudio.paInt16,
+                channels=1,
+                rate=44100,
+                input=True,
+                input_device_index=self.input_device_index,  # 使用自動搜尋的裝置
+                frames_per_buffer=4096
+            )
             return True
-                
         except Exception as e:
-            print(f"Error setting up microphone: {e}")
+            print(f"無法開啟麥克風: {e}")
             return False
 
-    def listen(self, duration=5):
+    def listen(self):
         """從麥克風捕獲語音並返回轉錄結果"""
-        if self.input_device_index is None:
-            print("麥克風未初始化，請先呼叫 start_microphone()")
-            return ""
-        
+        frames = []
+        for _ in range(0, int(16000 / 4096 * 5)):  # 捕捉 5 秒音頻
+            data = self.stream.read(4096, exception_on_overflow=False)  # 忽略溢出錯誤
+            frames.append(data)
+
+        audio_data = b''.join(frames)
+
         try:
-            print(f"開始錄音 {duration} 秒...")
-            
-            # 使用 sounddevice 錄音
-            recording = sd.rec(
-                int(duration * self.sample_rate), 
-                samplerate=self.sample_rate, 
-                channels=1, 
-                dtype='int16', 
-                device=self.input_device_index
-            )
-            sd.wait()  # 等待錄音完成
-            
-            print("錄音結束，正在處理...")
-            
-            # 檢查音訊數據品質
-            max_amplitude = np.max(np.abs(recording))
-            print(f"錄音最大振幅: {max_amplitude}")
-            
-            if max_amplitude < 100:  # 如果音訊太小
-                print("警告：錄音音量很低，可能需要調整麥克風音量")
-            
-            # 將錄音轉換為 WAV 格式
-            wav_buffer = self._convert_to_wav(recording, self.sample_rate)
-            
             # 傳送音訊到 IBM Watson Speech to Text
             result = self.speech_to_text.recognize(
-                audio=wav_buffer,
-                content_type='audio/wav',
+                audio=audio_data,
+                content_type='audio/l16; rate=44100; channels=1',
                 model='en-US_BroadbandModel',
-                keywords=['hello', 'hi', 'robot', 'wave', 'light', 'arm'],  # 添加關鍵字
-                keywords_threshold=0.5,
-                max_alternatives=3,
-                word_confidence=True
             ).get_result()
-            
-            print(f"Watson STT 回應: {result}")
 
             # 提取轉錄文本
             if 'results' in result and len(result['results']) > 0:
-                alternatives = result['results'][0]['alternatives']
-                if alternatives:
-                    transcript = alternatives[0]['transcript'].strip()
-                    confidence = alternatives[0].get('confidence', 0)
-                    print(f"識別結果: {transcript} (信心度: {confidence})")
-                    
-                    # 如果信心度太低，返回空字串
-                    if confidence < 0.3:
-                        print("信心度太低，忽略此結果")
-                        return ""
-                    
-                    return transcript
-                else:
-                    print("沒有找到替代方案")
-                    return ""
+                transcript = result['results'][0]['alternatives'][0]['transcript']
+                print(f"You said: {transcript}")
+                return transcript
             else:
-                print("沒有檢測到語音或結果為空")
+                print("No speech detected.")
                 return ""
-                
         except Exception as e:
             print(f"Error during Speech to Text: {e}")
             return ""
-
-    def _convert_to_wav(self, recording, sample_rate):
-        """將錄音轉換為 WAV 格式"""
-        wav_buffer = io.BytesIO()
-        
-        # 創建 WAV 文件
-        with wave.open(wav_buffer, 'wb') as wav_file:
-            wav_file.setnchannels(1)  # 單聲道
-            wav_file.setsampwidth(2)  # 16-bit
-            wav_file.setframerate(sample_rate)
-            wav_file.writeframes(recording.tobytes())
-        
-        wav_buffer.seek(0)
-        return wav_buffer
 
     def recognize_audio(self, audio_data, content_type='audio/webm'):
         """識別音訊檔案"""
@@ -153,39 +89,8 @@ class SpeechToText:
             return ""
 
     def stop_microphone(self):
-        """停止麥克風（sounddevice 不需要手動停止）"""
-        print("麥克風已停止")
-        pass
-
-    def test_recording(self, duration=3):
-        """測試錄音功能"""
-        print("=== 語音識別測試 ===")
-        
-        if not self.start_microphone():
-            print("測試失敗：無法初始化麥克風")
-            return False
-            
-        print(f"測試錄音 {duration} 秒...")
-        result = self.listen(duration)
-        
-        if result:
-            print(f"測試成功！識別結果: '{result}'")
-            return True
-        else:
-            print("測試完成，但沒有識別到語音")
-            print("建議檢查：")
-            print("1. 麥克風是否正常工作")
-            print("2. 麥克風音量設定")
-            print("3. 說話時是否靠近麥克風")
-            print("4. 網路連線是否正常")
-            return False
-
-    def list_audio_devices(self):
-        """列出所有音訊設備"""
-        print("=== 音訊設備列表 ===")
-        devices = sd.query_devices()
-        for i, device in enumerate(devices):
-            device_type = "輸入" if device['max_input_channels'] > 0 else "輸出"
-            if device['max_input_channels'] > 0:
-                print(f"{i}: {device['name']} ({device_type}) - 通道: {device['max_input_channels']}")
-        return devices
+        """關閉麥克風流"""
+        if self.stream and not self.stream.is_stopped():
+            self.stream.stop_stream()
+            self.stream.close()
+        self.audio.terminate()
