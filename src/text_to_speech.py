@@ -163,6 +163,11 @@ class TextToSpeech:
             if audio_data is not None:
                 print(f"準備播放: {sample_rate}Hz, 形狀: {audio_data.shape}")
                 sd.play(audio_data, samplerate=sample_rate, device=self.output_index)
+                if sample_rate == 22050:
+                    from scipy import signal
+                    audio_data = signal.resample(audio_data, len(audio_data) * 2)
+                    sample_rate = 44100
+                    print("已重新採樣到 44100Hz")
                 sd.wait()
                 print("✅ 播放完成")
             else:
