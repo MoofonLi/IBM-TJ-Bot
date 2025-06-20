@@ -1,7 +1,7 @@
 import os
-import struct
 import sounddevice as sd
-import scipy.io.wavfile as wavfile
+import wave
+import numpy as np
 from ibm_watson import TextToSpeechV1
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 
@@ -21,47 +21,120 @@ class TextToSpeech:
                 print(f"已自動選擇播放裝置: {device['name']} (index {i})")
                 break
 
-    def fix_wav_header_inplace(self, filename):
-        """直接在原檔案上修復 WAV header"""
+    def read_wav_with_wave_module(self, filename):
+        """使用 Python 內建的 wave 模組讀取（更寬容）"""
         try:
-            # 獲取檔案大小
-            file_size = os.path.getsize(filename)
-            correct_chunk_size = file_size - 8
-            
-            # 以讀寫模式打開檔案
-            with open(filename, 'r+b') as f:
-                # 檢查是否為 RIFF WAV
-                f.seek(0)
-                riff_header = f.read(4)
-                if riff_header != b'RIFF':
-                    print("不是 WAV 檔案")
-                    return False
+            with wave.open(filename, 'rb') as wav_file:
+                # 獲取音檔參數
+                frames = wav_file.getnframes()
+                sample_rate = wav_file.getframerate()
+                channels = wav_file.getnchannels()
+                sample_width = wav_file.getsampwidth()
                 
-                # 讀取當前的檔案大小欄位
-                current_size = struct.unpack('<I', f.read(4))[0]
+                print(f"音檔資訊: {sample_rate}Hz, {channels}聲道, {sample_width}bytes/樣本")
                 
-                # 如果檔案大小欄位是 0xFFFFFFFF，就修復它
-                if current_size == 0xFFFFFFFF:
-                    print(f"檢測到損壞的檔案大小欄位: {hex(current_size)}")
-                    print(f"修復為正確大小: {correct_chunk_size}")
-                    
-                    # 回到檔案大小欄位位置
-                    f.seek(4)
-                    # 寫入正確的檔案大小
-                    f.write(struct.pack('<I', correct_chunk_size))
-                    
-                    print("✅ WAV header 已修復")
-                    return True
+                # 讀取音檔數據
+                raw_audio = wav_file.readframes(frames)
+                
+                # 轉換為 numpy array
+                if sample_width == 1:
+                    # 8-bit
+                    audio_data = np.frombuffer(raw_audio, dtype=np.uint8)
+                    audio_data = (audio_data.astype(np.float32) - 128) / 128.0
+                elif sample_width == 2:
+                    # 16-bit
+                    audio_data = np.frombuffer(raw_audio, dtype=np.int16)
+                    audio_data = audio_data.astype(np.float32) / 32768.0
+                elif sample_width == 4:
+                    # 32-bit
+                    audio_data = np.frombuffer(raw_audio, dtype=np.int32)
+                    audio_data = audio_data.astype(np.float32) / 2147483648.0
                 else:
-                    print(f"檔案大小欄位正常: {current_size}")
-                    return True
-                    
+                    raise ValueError(f"不支援的樣本寬度: {sample_width}")
+                
+                # 處理多聲道
+                if channels > 1:
+                    audio_data = audio_data.reshape(-1, channels)
+                
+                return sample_rate, audio_data
+                
         except Exception as e:
-            print(f"修復失敗: {e}")
-            return False
+            print(f"wave 模組讀取失敗: {e}")
+            return None, None
+
+    def read_wav_manual(self, filename):
+        """手動解析 WAV 檔案（完全忽略檔案大小問題）"""
+        try:
+            with open(filename, 'rb') as f:
+                # 跳過 RIFF header (前12 bytes)
+                f.seek(12)
+                
+                # 尋找 fmt chunk
+                while True:
+                    chunk_header = f.read(8)
+                    if len(chunk_header) < 8:
+                        break
+                    
+                    chunk_id = chunk_header[:4]
+                    chunk_size = int.from_bytes(chunk_header[4:8], 'little')
+                    
+                    if chunk_id == b'fmt ':
+                        # 讀取 fmt chunk
+                        fmt_data = f.read(chunk_size)
+                        
+                        # 解析 fmt 資訊
+                        audio_format = int.from_bytes(fmt_data[0:2], 'little')
+                        channels = int.from_bytes(fmt_data[2:4], 'little')
+                        sample_rate = int.from_bytes(fmt_data[4:8], 'little')
+                        bytes_per_second = int.from_bytes(fmt_data[8:12], 'little')
+                        block_align = int.from_bytes(fmt_data[12:14], 'little')
+                        bits_per_sample = int.from_bytes(fmt_data[14:16], 'little')
+                        
+                        print(f"手動解析: {sample_rate}Hz, {channels}聲道, {bits_per_sample}bits")
+                        
+                    elif chunk_id == b'data':
+                        # 找到數據，讀取音訊內容
+                        print(f"找到音訊數據，大小: {chunk_size} bytes")
+                        
+                        # 直接讀取到檔案結尾（忽略 chunk_size）
+                        current_pos = f.tell()
+                        f.seek(0, 2)  # 移到檔案結尾
+                        file_end = f.tell()
+                        f.seek(current_pos)  # 回到數據開始位置
+                        
+                        actual_data_size = file_end - current_pos
+                        print(f"實際可讀取大小: {actual_data_size} bytes")
+                        
+                        # 讀取實際數據
+                        audio_bytes = f.read(actual_data_size)
+                        
+                        # 轉換為 numpy array
+                        if bits_per_sample == 16:
+                            audio_data = np.frombuffer(audio_bytes, dtype=np.int16)
+                            audio_data = audio_data.astype(np.float32) / 32768.0
+                        elif bits_per_sample == 8:
+                            audio_data = np.frombuffer(audio_bytes, dtype=np.uint8)
+                            audio_data = (audio_data.astype(np.float32) - 128) / 128.0
+                        else:
+                            raise ValueError(f"不支援的位元深度: {bits_per_sample}")
+                        
+                        # 處理多聲道
+                        if channels > 1:
+                            audio_data = audio_data.reshape(-1, channels)
+                        
+                        return sample_rate, audio_data
+                    else:
+                        # 跳過其他 chunk
+                        f.seek(chunk_size, 1)
+                        
+            return None, None
+            
+        except Exception as e:
+            print(f"手動解析失敗: {e}")
+            return None, None
 
     def speak(self, text):
-        """生成語音並播放"""
+        """生成語音並播放（完全避開 scipy）"""
         audio_filename = 'tts_output.wav'
         
         try:
@@ -77,22 +150,24 @@ class TextToSpeech:
             
             print(f"音檔已保存為 {audio_filename}")
             
-            # 2. 直接修復檔案開頭
-            print("檢查並修復 WAV header...")
-            self.fix_wav_header_inplace(audio_filename)
+            # 2. 嘗試用 wave 模組讀取（方法1）
+            print("嘗試用 wave 模組讀取...")
+            sample_rate, audio_data = self.read_wav_with_wave_module(audio_filename)
             
-            # 3. 現在應該可以正常用 scipy 讀取了
-            print("讀取修復後的音檔...")
-            fs, data = wavfile.read(audio_filename)
+            # 3. 如果 wave 模組失敗，用手動解析（方法2）
+            if audio_data is None:
+                print("wave 模組失敗，嘗試手動解析...")
+                sample_rate, audio_data = self.read_wav_manual(audio_filename)
             
-            print(f"✅ 讀取成功 - 採樣率: {fs}Hz, 形狀: {data.shape}")
-            
-            # 4. 播放
-            print("開始播放...")
-            sd.play(data, samplerate=fs, device=self.output_index)
-            sd.wait()
-            print("播放完成")
-            
+            # 4. 播放音檔
+            if audio_data is not None:
+                print(f"準備播放: {sample_rate}Hz, 形狀: {audio_data.shape}")
+                sd.play(audio_data, samplerate=sample_rate, device=self.output_index)
+                sd.wait()
+                print("✅ 播放完成")
+            else:
+                print("❌ 無法讀取音檔")
+                
         except Exception as e:
             print(f"錯誤: {e}")
 
