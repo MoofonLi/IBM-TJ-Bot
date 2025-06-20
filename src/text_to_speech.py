@@ -18,7 +18,6 @@ class TextToSpeech:
                 break
         if output_index is None:
             print("沒有找到 USB 音效卡，請確認是否插好。")
-        exit(1)
         
 
     def speak(self, text):
