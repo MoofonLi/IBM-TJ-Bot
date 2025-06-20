@@ -39,7 +39,8 @@ class SystemControl:
             
             st.session_state.hardware = HardwareControl()
 
-            return True
+            if 'chat_history' not in st.session_state:
+                st.session_state.chat_history = []
 
         except Exception as e:
             print(f"{e}")

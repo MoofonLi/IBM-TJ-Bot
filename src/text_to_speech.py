@@ -40,10 +40,34 @@ class TextToSpeech:
                 temp_file.write(response.content)
                 temp_filename = temp_file.name
 
-            # 讀取音檔並播放
-            fs, data = wavfile.read(temp_filename)
-            sd.play(data, samplerate=fs, device=self.output_index)
-            sd.wait()
+            # 檢查檔案大小
+            file_size = os.path.getsize(temp_filename)
+            print(f"Audio file size: {file_size} bytes")
+            
+            if file_size > 50 * 1024 * 1024:  # 如果檔案超過 50MB
+                print("Audio file too large, skipping playback")
+                os.unlink(temp_filename)
+                return False
+
+            try:
+                # 嘗試讀取音檔
+                fs, data = wavfile.read(temp_filename)
+                print(f"Sample rate: {fs}, Data shape: {data.shape}, Data type: {data.dtype}")
+                
+                # 檢查資料是否合理
+                if len(data) > 10 * fs:  # 如果音頻超過 10 秒
+                    print("Audio too long, truncating to 10 seconds")
+                    data = data[:10 * fs]
+                
+                # 播放音頻
+                sd.play(data, samplerate=fs, device=self.output_index)
+                sd.wait()
+                
+            except Exception as read_error:
+                print(f"Error reading audio file: {read_error}")
+                # 清理檔案並返回失敗
+                os.unlink(temp_filename)
+                return False
 
             # 清理臨時檔案
             os.unlink(temp_filename)
