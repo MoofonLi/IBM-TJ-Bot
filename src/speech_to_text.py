@@ -1,7 +1,9 @@
 import sounddevice as sd
+import scipy.io.wavfile as wavfile
 import numpy as np
 from ibm_watson import SpeechToTextV1
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
+import os
 
 class SpeechToText:
     def __init__(self, apikey, url):
@@ -47,12 +49,14 @@ class SpeechToText:
             return False
 
     def listen(self):
-        """從麥克風捕獲語音並返回轉錄結果"""
+        """從麥克風捕獲語音，先存檔再識別"""
         try:
             duration = 5  # 錄音秒數
+            filename = "temp_recording.wav"
+            
             print("開始錄音...")
             
-            # 使用與您的測試程式相同的參數
+            # 使用與您的測試程式完全相同的錄音邏輯
             recording = sd.rec(
                 int(duration * self.sample_rate), 
                 samplerate=self.sample_rate, 
@@ -63,26 +67,49 @@ class SpeechToText:
             sd.wait()
             print("錄音結束")
 
-            # 將錄音資料轉換為 bytes
-            audio_data = recording.tobytes()
+            # 儲存成 wav 檔案（與您的測試程式相同）
+            wavfile.write(filename, self.sample_rate, recording)
+            print(f"錄音已儲存為 {filename}")
+            
+            # 檢查檔案是否存在和大小
+            if os.path.exists(filename):
+                file_size = os.path.getsize(filename)
+                print(f"檔案大小: {file_size} bytes")
+                
+                if file_size > 1000:  # 如果檔案大於 1KB，應該有錄到聲音
+                    print("檔案看起來正常，開始進行語音識別...")
+                    
+                    # 讀取 wav 檔案並送給 STT
+                    with open(filename, 'rb') as audio_file:
+                        result = self.speech_to_text.recognize(
+                            audio=audio_file,
+                            content_type='audio/wav',
+                            model='en-US_BroadbandModel',
+                        ).get_result()
 
-            # 傳送音訊到 IBM Watson Speech to Text
-            result = self.speech_to_text.recognize(
-                audio=audio_data,
-                content_type=f'audio/l16; rate={self.sample_rate}; channels=1',
-                model='en-US_BroadbandModel',
-            ).get_result()
-
-            # 提取轉錄文本
-            if 'results' in result and len(result['results']) > 0:
-                transcript = result['results'][0]['alternatives'][0]['transcript']
-                print(f"You said: {transcript}")
-                return transcript
+                    # 提取轉錄文本
+                    if 'results' in result and len(result['results']) > 0:
+                        transcript = result['results'][0]['alternatives'][0]['transcript']
+                        print(f"You said: {transcript}")
+                        
+                        # 清理臨時檔案
+                        os.remove(filename)
+                        return transcript
+                    else:
+                        print("No speech detected.")
+                        return ""
+                else:
+                    print("警告：錄音檔案太小，可能沒有錄到聲音")
+                    return ""
             else:
-                print("No speech detected.")
+                print("錯誤：錄音檔案未建立")
                 return ""
+                
         except Exception as e:
-            print(f"Error during Speech to Text: {e}")
+            print(f"Error during recording or Speech to Text: {e}")
+            # 如果出錯，也要清理臨時檔案
+            if os.path.exists("temp_recording.wav"):
+                os.remove("temp_recording.wav")
             return ""
 
     def recognize_audio(self, audio_data, content_type='audio/webm'):
