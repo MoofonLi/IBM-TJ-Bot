@@ -1,5 +1,9 @@
 import RPi.GPIO as GPIO
 from rpi_ws281x import PixelStrip, Color
+import math
+import board
+import neopixel
+import colorsys
 import time
 
 class HardwareControl:
@@ -12,11 +16,9 @@ class HardwareControl:
         self.servo = GPIO.PWM(self.servo_pin, 50)  # 50Hz
         self.servo.start(0)
 
-        # 初始化 Neopixel LED
+        # 初始化 Neopixel LED (按照第一段代碼的方式)
         self.led_count = led_count
-        self.led_pin = led_pin
-        self.strip = PixelStrip(led_count, led_pin, 800000, 10, False, 255, 0)
-        self.strip.begin()
+        self.pixels = neopixel.NeoPixel(led_pin, led_count, brightness=1.0, auto_write=False, pixel_order=neopixel.RGB)
 
     def stop_servo_signal(self):
         """停止伺服馬達的PWM信號以避免抖動"""
@@ -57,22 +59,21 @@ class HardwareControl:
 
 
     def shine(self, color_name):
-        """改變 Neopixel LED 顏色"""
+        """改變 Neopixel LED 顏色 (使用neopixel的方式)"""
         print(f"Shining {color_name} light...")
         color_map = {
-            "red": Color(0, 255, 0),
-            "green": Color(255, 0, 0),
-            "blue": Color(0, 0, 255),
-            "white": Color(255, 255, 255),
-            "yellow": Color(128, 255, 0),
-            "purple": Color(0, 255, 255),
-            "orange": Color(64, 255, 0),
-            "off": Color(0, 0, 0)
+            "red": (255, 0, 0),
+            "green": (0, 255, 0),
+            "blue": (0, 0, 255),
+            "white": (255, 255, 255),
+            "yellow": (255, 255, 0),
+            "purple": (255, 0, 255),
+            "orange": (255, 165, 0),
+            "off": (0, 0, 0)
         }
-        color = color_map.get(color_name.lower(), Color(255, 255, 255))  # 默認白色
-        for i in range(self.led_count):
-            self.strip.setPixelColor(i, color)
-        self.strip.show()
+        color = color_map.get(color_name.lower(), (255, 255, 255))  # 默認白色
+        self.pixels.fill(color)
+        self.pixels.show()
 
 
     def dance(self):
@@ -97,6 +98,7 @@ class HardwareControl:
         time.sleep(0.5)
         self.stop_servo_signal()  # 停止PWM信號
         self.shine("off")  # 關閉燈光
+
 
 
     def cleanup(self):
