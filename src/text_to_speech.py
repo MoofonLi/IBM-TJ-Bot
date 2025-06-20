@@ -23,7 +23,7 @@ class TextToSpeech:
     def speak(self, text):
         """使用 IBM Watson Text to Speech 將文字轉為語音並播放"""
         try:
-            with open('record.wav', 'wb') as audio_file:
+            with open('response.wav', 'wb') as audio_file:
                 response = self.text_to_speech.synthesize(
                     text,
                     voice='en-US_AllisonV3Voice',  # 可以更改為其他聲音
