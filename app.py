@@ -136,45 +136,45 @@ def main():
 
         # 語音輸入按鈕
         st.header("聊天控制")
-
-        # 初始化錄音狀態
         if 'is_recording' not in st.session_state:
             st.session_state.is_recording = False
 
-        # 方案 1: 真正的開始/停止控制
-        col1, col2 = st.columns(2)
-
-        with col1:
-            if st.button("🎤 開始錄音", use_container_width=True, disabled=st.session_state.is_recording):
-                if st.session_state.stt:
-                    if st.session_state.stt.start_recording():
-                        st.session_state.is_recording = True
-                        st.success("🎤 正在錄音中...")
-                        st.experimental_rerun()
-                    else:
-                        st.error("無法開始錄音")
-
-        with col2:
-            if st.button("⏹️ 停止錄音", use_container_width=True, disabled=not st.session_state.is_recording):
-                if st.session_state.stt and st.session_state.is_recording:
-                    with st.spinner("正在處理語音..."):
-                        user_input = st.session_state.stt.stop_recording()
-                        st.session_state.is_recording = False
-                        
-                        if user_input and user_input.strip():
-                            st.session_state.chat_history.append(("user", user_input))
-                            process_message(user_input)
-                            st.experimental_rerun()
-                        else:
-                            st.warning("沒有識別到有效語音，請重試")
-
-
+        # 語音輸入控制
+        st.header("🎤 語音控制")
+        
+        # 使用不同的按鈕顯示來表示狀態
         if st.session_state.is_recording:
-            st.info("🔴 正在錄音中... 請說話，然後點擊停止錄音")
+            if st.button("🔴 停止錄音", use_container_width=True, type="secondary"):
+                st.session_state.is_recording = False
+                if st.session_state.stt:
+                    with st.spinner("正在處理語音..."):
+                        user_input = st.session_state.stt.listen()
+                        if user_input and user_input.strip():
+                            # 保存到對話歷史
+                            st.session_state.chat_history.append(("user", user_input))
+                            # 處理訊息
+                            process_message(user_input)
+                            st.rerun()
+                        else:
+                            st.warning("沒有識別到語音，請重試")
+                else:
+                    st.error("語音系統未初始化")
+        else:
+            if st.button("🎤 開始語音輸入", use_container_width=True, type="primary"):
+                if st.session_state.stt:
+                    st.session_state.is_recording = True
+                    if st.session_state.stt.start_microphone():
+                        st.info("🎤 正在錄音，請說話... (5秒後自動結束)")
+                        st.rerun()
+                    else:
+                        st.error("無法啟動麥克風")
+                        st.session_state.is_recording = False
+                else:
+                    st.error("請先初始化系統")
 
-        st.divider()
-
-
+        # 顯示錄音狀態
+        if st.session_state.is_recording:
+            st.info("🔴 錄音中...")
 
         # 清除對話按鈕
         if st.button("清除對話", use_container_width=True):
