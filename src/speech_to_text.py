@@ -76,8 +76,6 @@ class SpeechToText:
                         transcript = result['results'][0]['alternatives'][0]['transcript']
                         print(f"You said: {transcript}")
                         
-                        # 清理臨時檔案
-                        os.remove(filename)
                         return transcript
                     else:
                         print("No speech detected.")
