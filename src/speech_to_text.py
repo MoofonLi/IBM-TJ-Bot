@@ -20,7 +20,7 @@ class SpeechToText:
         try:
             # ===== 完全複製您的測試程式邏輯 =====
             duration = 5  # 錄音秒數
-            filename = "temp_recording.wav"
+            filename = "temp_recording_test.wav"
 
             # 列出錄音裝置
             devices = sd.query_devices()
@@ -39,7 +39,7 @@ class SpeechToText:
 
             if input_index is None:
                 print("沒有找到 USB 麥克風，請確認是否插好。")
-                exit(1)
+                return ""
 
             # 取得錄音裝置支援的預設採樣率
             fs = int(devices[input_index]['default_samplerate'])
@@ -49,8 +49,9 @@ class SpeechToText:
             sd.wait()
             print("錄音結束")
 
-            # 儲存成 wav
-            wavfile.write(filename, fs, recording)
+            # 儲存成 wav - 確保數據是正確的格式
+            recording_squeezed = np.squeeze(recording)
+            wavfile.write(filename, fs, recording_squeezed)
             print(f"錄音已儲存為 {filename}")
             # ===== 您的測試程式邏輯結束 =====
             
