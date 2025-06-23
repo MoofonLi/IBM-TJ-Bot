@@ -165,7 +165,7 @@ def main():
                     st.session_state.is_recording = True
                     if st.session_state.stt.start_microphone():
                         st.info("🎤 正在錄音，請說話... (5秒後自動結束)")
-                        st.rerun()
+                        st.experimental_rerun()
                     else:
                         st.error("無法啟動麥克風")
                         st.session_state.is_recording = False
