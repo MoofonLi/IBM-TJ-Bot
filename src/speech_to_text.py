@@ -20,8 +20,12 @@ class SpeechToText:
         try:
             # ===== 完全複製您的測試程式邏輯 =====
             duration = 5  # 錄音秒數
-            filename = "temp_recording_test.wav"
-
+            filename = "temp_recording.wav"
+            # 清理臨時檔案
+            try:
+                os.remove(filename)
+            except Exception:
+                pass
             # 列出錄音裝置
             devices = sd.query_devices()
             print("錄音裝置列表")
