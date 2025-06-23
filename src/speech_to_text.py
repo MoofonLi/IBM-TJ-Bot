@@ -22,36 +22,32 @@ class SpeechToText:
         self.sample_rate = 44100  # 預設採樣率
         
     def find_microphone(self):
-        """尋找並設定麥克風設備"""
+        """尋找並設定麥克風設備 - 參考 audio_device_test.py 實現"""
         devices = sd.query_devices()
         print("錄音裝置列表:")
         
         # 列出所有輸入設備
-        input_devices = []
         for i, d in enumerate(devices):
             if d['max_input_channels'] > 0:
-                print(f"{i}: {d['name']} - 採樣率: {d['default_samplerate']}")
-                input_devices.append((i, d))
+                print(f"{i}: {d['name']}")
         
-        # 優先尋找 USB 麥克風
-        for i, device in input_devices:
-            if "USB PnP Sound Device" in device['name']:
-                self.input_device_index = i
-                self.sample_rate = int(device['default_samplerate'])
-                print(f"已選擇 USB 麥克風: {device['name']} (index {i})")
-                return True
+        # 自動尋找 USB PnP Sound Device (麥克風)
+        input_index = None
+        for i, device in enumerate(devices):
+            if "USB PnP Sound Device" in device['name'] and device['max_input_channels'] > 0:
+                input_index = i
+                print(f"已自動選擇錄音裝置: {device['name']} (index {i})")
+                break
         
-        # 如果沒有 USB 麥克風，使用預設輸入設備
-        if input_devices:
-            default_input = sd.default.device[0]
-            if default_input is not None and default_input >= 0:
-                self.input_device_index = default_input
-                self.sample_rate = int(devices[default_input]['default_samplerate'])
-                print(f"使用預設麥克風: {devices[default_input]['name']}")
-                return True
+        if input_index is None:
+            print("沒有找到 USB 麥克風，請確認是否插好。")
+            return False
         
-        print("錯誤：找不到可用的麥克風設備")
-        return False
+        # 設定錄音參數
+        self.input_device_index = input_index
+        self.sample_rate = int(devices[input_index]['default_samplerate'])
+        
+        return True
 
     def audio_callback(self, indata, frames, time, status):
         """音訊回調函數，用於即時錄音"""
@@ -154,11 +150,63 @@ class SpeechToText:
             return ""
 
     def listen(self):
-        """保留舊方法的相容性 - 固定時長錄音"""
-        if self.start_recording():
-            time.sleep(5)  # 錄音 5 秒
-            return self.stop_recording()
-        return ""
+        """簡化的錄音方法 - 參考 audio_device_test.py 的直接錄音方式"""
+        # 參數設定
+        duration = 5  # 錄音秒數
+        filename = "temp_recording.wav"
+        
+        # 尋找麥克風設備
+        if not self.find_microphone():
+            return ""
+        
+        print("開始錄音")
+        try:
+            # 直接錄音 - 參考 audio_device_test.py 的方式
+            recording = sd.rec(
+                int(duration * self.sample_rate), 
+                samplerate=self.sample_rate, 
+                channels=1, 
+                dtype='int16', 
+                device=self.input_device_index
+            )
+            sd.wait()
+            print("錄音結束")
+            
+            # 儲存成 wav
+            wavfile.write(filename, self.sample_rate, recording)
+            print(f"錄音已儲存為 {filename}")
+            
+            # 檢查檔案大小
+            file_size = os.path.getsize(filename)
+            print(f"錄音檔案大小: {file_size} bytes")
+            
+            if file_size < 1000:
+                print("警告：錄音檔案太小，可能沒有錄到聲音")
+                return ""
+            
+            # 進行語音識別
+            with open(filename, 'rb') as audio_file:
+                result = self.speech_to_text.recognize(
+                    audio=audio_file,
+                    content_type='audio/wav',
+                    model='en-US_BroadbandModel',
+                ).get_result()
+            
+            # 清理臨時檔案
+            os.remove(filename)
+            
+            # 提取文字
+            if 'results' in result and len(result['results']) > 0:
+                transcript = result['results'][0]['alternatives'][0]['transcript']
+                print(f"識別結果: {transcript}")
+                return transcript
+            else:
+                print("沒有識別到語音")
+                return ""
+                
+        except Exception as e:
+            print(f"錄音或識別錯誤: {e}")
+            return ""
 
     def start_microphone(self):
         """檢查麥克風是否準備好"""
