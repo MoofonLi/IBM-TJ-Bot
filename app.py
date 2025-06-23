@@ -136,23 +136,45 @@ def main():
 
         # 語音輸入按鈕
         st.header("聊天控制")
+
+        # 初始化錄音狀態
         if 'is_recording' not in st.session_state:
             st.session_state.is_recording = False
 
-        if st.button("🎤 按此開始/停止語音輸入", use_container_width=True):
-            st.session_state.is_recording = not st.session_state.is_recording
-            if st.session_state.is_recording:
-                st.session_state.is_recording = True
-                st.info("正在聆聽，請說話...")
-                st.session_state.stt.start_microphone()
-            else:
-                st.session_state.is_recording = False
-                st.info("錄音已停止，正在處理...")
+        # 方案 1: 真正的開始/停止控制
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("🎤 開始錄音", use_container_width=True, disabled=st.session_state.is_recording):
                 if st.session_state.stt:
-                    user_input = st.session_state.stt.listen().strip()
-                    st.session_state.chat_history.append(("user", user_input))
-                    #st.chat_message("user").write(user_input)
-                    process_message(user_input)
+                    if st.session_state.stt.start_recording():
+                        st.session_state.is_recording = True
+                        st.success("🎤 正在錄音中...")
+                        st.experimental_rerun()
+                    else:
+                        st.error("無法開始錄音")
+
+        with col2:
+            if st.button("⏹️ 停止錄音", use_container_width=True, disabled=not st.session_state.is_recording):
+                if st.session_state.stt and st.session_state.is_recording:
+                    with st.spinner("正在處理語音..."):
+                        user_input = st.session_state.stt.stop_recording()
+                        st.session_state.is_recording = False
+                        
+                        if user_input and user_input.strip():
+                            st.session_state.chat_history.append(("user", user_input))
+                            process_message(user_input)
+                            st.experimental_rerun()
+                        else:
+                            st.warning("沒有識別到有效語音，請重試")
+
+
+        if st.session_state.is_recording:
+            st.info("🔴 正在錄音中... 請說話，然後點擊停止錄音")
+
+        st.divider()
+
+
 
         # 清除對話按鈕
         if st.button("清除對話", use_container_width=True):
