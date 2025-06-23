@@ -49,8 +49,9 @@ class SpeechToText:
             sd.wait()
             print("錄音結束")
 
-            # 儲存成 wav
-            wavfile.write(filename, fs, recording)
+            # 儲存成 wav - 確保數據是正確的格式
+            recording_squeezed = np.squeeze(recording)
+            wavfile.write(filename, fs, recording_squeezed)
             print(f"錄音已儲存為 {filename}")
             # ===== 您的測試程式邏輯結束 =====
             
