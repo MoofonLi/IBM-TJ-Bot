@@ -39,6 +39,7 @@ echo "Upgrading pip..."
 pip install --upgrade pip
 
 echo "Installing Python dependencies..."
+export BLINKA_FORCECHIP=BCM2XXX
 pip install -r requirements.txt
 
 # ====== 檢查 .env 檔案 ======
