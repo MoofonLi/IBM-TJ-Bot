@@ -8,6 +8,7 @@ from src.watson_assistant import WatsonAssistant
 from src.text_to_speech import TextToSpeech
 from src.speech_to_text import SpeechToText
 from src.hardware_control import HardwareControl
+from src.chat_setting import ChatSetting
 
 
 load_dotenv()
@@ -45,6 +46,8 @@ class SystemControl:
 
             if 'chat_history' not in st.session_state:
                 st.session_state.chat_history = []
+
+            st.session_state.chat_setting = ChatSetting()
 
             return True
 

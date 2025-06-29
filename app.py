@@ -3,6 +3,30 @@ from dotenv import load_dotenv
 from src.system_control import SystemControl
 
 
+def agent_responce(prompt, agent_type):
+    if agent_type == "main_agent":
+        with st.chat_message("assistant"):
+            message_placeholder = st.empty()
+            # 使用 streaming 生成回應
+            full_response = ""
+            
+            for response_chunk in st.session_state.chat_setting.generate_response_stream(prompt,agent_type):
+                full_response = response_chunk
+                # 即時更新顯示的內容
+                message_placeholder.markdown(full_response + "▌")  # 加上游標效果
+            
+            # 移除游標，顯示最終結果
+            message_placeholder.markdown(full_response)
+            st.session_state.chat_history.append(("assistant", full_response))
+    else:
+        full_response = ""
+        
+        for response_chunk in st.session_state.chat_setting.generate_response_stream(prompt,agent_type):
+            full_response = response_chunk
+        
+        return full_response
+
+
 def process_message(user_input):
     """處理使用者訊息並執行相應動作"""
     if not st.session_state.assistant:
@@ -21,21 +45,30 @@ def process_message(user_input):
         intents = response.get('output', {}).get('intents', [])
         entities = response.get('output', {}).get('entities', [])
         response_texts = response.get('output', {}).get('generic', [])
-        
-        # 像原始代碼一樣逐條處理回應文字
-        for text in response_texts:
-            if text['response_type'] == 'text':
-                bot_reply = text['text']
-                
-                # 保存對話歷史 - 機器人回應
-                st.session_state.chat_history.append(("assistant", bot_reply))
 
-                # 顯示於chat介面
-                st.chat_message("assistant").write(bot_reply)
-                
-                # 語音輸出 - 直接在TJBot上播放
-                if st.session_state.tts:
-                    st.session_state.tts.speak(bot_reply)
+        if intents[0]['intent'] == "ask_weather":
+            agent_responce(agent_responce(user_input, "weather"), "main_agent")
+        elif intents[0]['intent'] == "search_online":
+            agent_responce(agent_responce(user_input, "google_search"), "main_agent")
+        elif intents[0]['intent'] == "Chat":
+            agent_responce(user_input, "main_agent")
+            
+        else:
+            # 像原始代碼一樣逐條處理回應文字
+            for text in response_texts:
+                if text['response_type'] == 'text':
+                    bot_reply = text['text']
+                    
+                    # 保存對話歷史 - 機器人回應
+                    st.session_state.chat_history.append(("assistant", bot_reply))
+
+                    # 顯示於chat介面
+                    st.chat_message("assistant").write(bot_reply)
+
+                    
+        # 語音輸出 - 直接在TJBot上播放
+        if st.session_state.tts:
+            st.session_state.tts.speak(bot_reply)
 
         
         # 執行硬體動作
@@ -43,22 +76,25 @@ def process_message(user_input):
             top_intent = intents[0]['intent']
             if top_intent == 'wave':
                 st.session_state.hardware.wave()
-                st.info("機器人揮手👋")
+                st.info("瓦麥揮手👋")
             elif top_intent == 'lower-arm':
                 st.session_state.hardware.lower_arm()
-                st.info("機器人放下手臂🙇")
+                st.info("瓦麥放下手臂🙇")
             elif top_intent == 'raise-arm':
                 st.session_state.hardware.raise_arm()
-                st.info("機器人舉起手臂🙋‍♂️")
+                st.info("瓦麥舉起手臂🙋‍♂️")
             elif top_intent == 'shine':
                 # 從 entities 提取顏色
                 color = next((e['value'] for e in entities if e['entity'] == 'color'), 'white')
                 st.session_state.hardware.shine(color)
-                st.info(f"機器人發光: {color}✨")
+                st.info(f"瓦麥發光: {color}✨")
+            elif top_intent == 'dance':
+                st.session_state.hardware.dance()
+                st.info("瓦麥跳舞🕺")
 
         return "處理完成"
     else:
-        st.error("無法獲取 Watson 回應")
+        st.error("無法獲取 Assistant 回應")
         return None
 
 
@@ -154,7 +190,7 @@ def main():
                             st.session_state.chat_history.append(("user", user_input))
                             # 處理訊息
                             process_message(user_input)
-                            st.rerun()
+                            st.experimental_rerun()
                         else:
                             st.warning("沒有識別到語音，請重試")
                 else:
