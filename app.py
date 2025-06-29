@@ -154,7 +154,7 @@ def main():
                             st.session_state.chat_history.append(("user", user_input))
                             # 處理訊息
                             process_message(user_input)
-                            st.rerun()
+                            st.experimental_rerun()
                         else:
                             st.warning("沒有識別到語音，請重試")
                 else:
