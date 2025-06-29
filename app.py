@@ -157,6 +157,7 @@ def main():
                             st.experimental_rerun()
                         else:
                             st.warning("沒有識別到語音，請重試")
+                            st.experimental_rerun()
                 else:
                     st.error("語音系統未初始化")
         else:
