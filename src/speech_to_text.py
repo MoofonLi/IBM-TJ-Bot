@@ -24,19 +24,14 @@ class SpeechToText:
     def find_microphone(self):
         """尋找並設定麥克風設備 - 參考 audio_device_test.py 實現"""
         devices = sd.query_devices()
-        print("錄音裝置列表:")
-        
-        # 列出所有輸入設備
-        for i, d in enumerate(devices):
-            if d['max_input_channels'] > 0:
-                print(f"{i}: {d['name']}")
+        # print("錄音裝置列表:")
+
         
         # 自動尋找 USB PnP Sound Device (麥克風)
         input_index = None
         for i, device in enumerate(devices):
             if "USB PnP Sound Device" in device['name'] and device['max_input_channels'] > 0:
                 input_index = i
-                print(f"已自動選擇錄音裝置: {device['name']} (index {i})")
                 break
         
         if input_index is None:
@@ -51,8 +46,6 @@ class SpeechToText:
 
     def audio_callback(self, indata, frames, time, status):
         """音訊回調函數，用於即時錄音"""
-        if status:
-            print(f"錄音狀態警告: {status}")
         if self.is_recording:
             self.audio_queue.put(indata.copy())
 
@@ -95,7 +88,7 @@ class SpeechToText:
         except:
             pass
         
-        print("錄音結束，處理音訊...")
+        # print("錄音結束，處理音訊...")
         
         # 從 queue 收集所有音訊數據
         audio_chunks = []
@@ -118,11 +111,8 @@ class SpeechToText:
         
         # 檢查檔案
         file_size = os.path.getsize(filename)
-        print(f"錄音檔案大小: {file_size} bytes")
+        # print(f"錄音檔案大小: {file_size} bytes")
         
-        if file_size < 1000:
-            print("警告：錄音檔案太小，可能沒有錄到聲音")
-            return ""
         
         # 進行語音識別
         try:
@@ -139,10 +129,10 @@ class SpeechToText:
             # 提取文字
             if 'results' in result and len(result['results']) > 0:
                 transcript = result['results'][0]['alternatives'][0]['transcript']
-                print(f"識別結果: {transcript}")
+                # print(f"識別結果: {transcript}")
                 return transcript
             else:
-                print("沒有識別到語音")
+                # print("沒有識別到語音")
                 return ""
                 
         except Exception as e:
@@ -150,7 +140,7 @@ class SpeechToText:
             return ""
 
     def listen(self):
-        """簡化的錄音方法 - 參考 audio_device_test.py 的直接錄音方式"""
+
         # 參數設定
         duration = 5  # 錄音秒數
         filename = "temp_recording.wav"

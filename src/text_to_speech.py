@@ -34,11 +34,9 @@ class TextToSpeech:
                                 device_id = f"plughw:{card_num},{device_num}"
                                 # 測試設備是否可用
                                 if self._test_audio_device(device_id):
-                                    print(f"找到可用音頻設備: {device_id}")
+                                    # print(f"找到可用音頻設備: {device_id}")
                                     return device_id
             
-            # 如果沒找到，使用預設值
-            print("未找到特定音頻設備，使用預設值: plughw:2,0")
             return "plughw:2,0"
             
         except Exception as e:
@@ -65,7 +63,7 @@ class TextToSpeech:
                     accept='audio/wav'
                 ).get_result()
                 audio_file.write(response.content)
-            print("Audio file saved as response.wav")
+            # print("Audio file saved as response.wav")
             
             # 使用自動偵測的音頻設備
             os.system(f"aplay -D {self.audio_device} response.wav")

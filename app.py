@@ -24,7 +24,7 @@ def agent_responce(prompt, agent_type):
         for response_chunk in st.session_state.chat_setting.generate_response_stream(prompt,agent_type):
             full_response = response_chunk
         
-        return full_response
+    return full_response
 
 
 def process_message(user_input):
@@ -46,24 +46,26 @@ def process_message(user_input):
         entities = response.get('output', {}).get('entities', [])
         response_texts = response.get('output', {}).get('generic', [])
 
-        if intents[0]['intent'] == "ask_weather":
-            agent_responce(agent_responce(user_input, "weather"), "main_agent")
-        elif intents[0]['intent'] == "search_online":
-            agent_responce(agent_responce(user_input, "google_search"), "main_agent")
-        elif intents[0]['intent'] == "Chat":
-            agent_responce(user_input, "main_agent")
+        if intents and len(intents) > 0 and intents[0]['intent'] == "ask_weather":
+            bot_reply = agent_responce(agent_responce(user_input, "weather"), "main_agent")
+        elif intents and len(intents) > 0 and intents[0]['intent'] == "search_online":
+            bot_reply = agent_responce(agent_responce(user_input, "google_search"), "main_agent")
             
         else:
             # 像原始代碼一樣逐條處理回應文字
             for text in response_texts:
                 if text['response_type'] == 'text':
                     bot_reply = text['text']
-                    
-                    # 保存對話歷史 - 機器人回應
-                    st.session_state.chat_history.append(("assistant", bot_reply))
 
-                    # 顯示於chat介面
-                    st.chat_message("assistant").write(bot_reply)
+                    if bot_reply == "Chat":
+                        bot_reply = agent_responce(user_input, "main_agent")
+                    
+                    else:                
+                        # 保存對話歷史 - 機器人回應
+                        st.session_state.chat_history.append(("assistant", bot_reply))
+
+                        # 顯示於chat介面
+                        st.chat_message("assistant").write(bot_reply)
 
                     
         # 語音輸出 - 直接在TJBot上播放
@@ -193,6 +195,7 @@ def main():
                             st.experimental_rerun()
                         else:
                             st.warning("沒有識別到語音，請重試")
+                            st.experimental_rerun()
                 else:
                     st.error("語音系統未初始化")
         else:
