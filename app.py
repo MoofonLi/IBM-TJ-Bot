@@ -1,7 +1,7 @@
 import streamlit as st
 from dotenv import load_dotenv
 from src.system_control import SystemControl
-
+import time
 
 def agent_responce(prompt, agent_type):
     if agent_type == "main_agent":
@@ -48,8 +48,14 @@ def process_message(user_input):
 
         if intents and len(intents) > 0 and intents[0]['intent'] == "ask_weather":
             bot_reply = agent_responce(agent_responce(user_input, "weather"), "main_agent")
+            st.session_state.hardware.shine("blue")
+            time.sleep(3)
+            st.session_state.hardware.shine("off")
         elif intents and len(intents) > 0 and intents[0]['intent'] == "search_online":
             bot_reply = agent_responce(agent_responce(user_input, "google_search"), "main_agent")
+            st.session_state.hardware.shine("white")
+            time.sleep(3)
+            st.session_state.hardware.shine("off")
             
         else:
             # 像原始代碼一樣逐條處理回應文字
@@ -59,6 +65,7 @@ def process_message(user_input):
 
                     if bot_reply == "Chat":
                         bot_reply = agent_responce(user_input, "main_agent")
+                        st.session_state.hardware.wave()
                     
                     else:                
                         # 保存對話歷史 - 機器人回應
